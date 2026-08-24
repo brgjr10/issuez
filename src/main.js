@@ -221,6 +221,7 @@ function renderTable() {
                 </td>
                 <td>
                   <span class="issue-title" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">${escapeHtml(issue.title)}</span>
+                  <a class="issue-gh-link" href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>
                   <span class="issue-number">#${issue.number}</span>
                 </td>
                 <td>
@@ -288,7 +289,7 @@ function renderCards() {
         <div class="issue-card" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">
           <div class="issue-card-header">
             <div>
-              <div class="issue-card-title">${escapeHtml(issue.title)}</div>
+              <div class="issue-card-title">${escapeHtml(issue.title)} <a href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size:0.75rem; opacity:0.7;">↗</a></div>
               <div class="issue-card-meta">
                 <span class="issue-card-repo">${escapeHtml(issue.repo)}</span>
                 <span>&#183;</span>
