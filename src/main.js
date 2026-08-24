@@ -602,12 +602,18 @@ async function toggleIssueState(repo, number) {
     await updateIssue(repo.split('/')[0], repo.split('/')[1], number, { state: newState });
     showToast(`Issue ${newState}`, 'success');
     await loadAllIssues();
+    const updated = getState().issues.find(i => i.repo_full === repo && i.number === number);
+    if (updated) {
+      setState({ selectedIssue: updated });
+      render();
+      loadComments(repo, number);
+    }
   } catch (e) {
     showToast(e.message, 'error');
   }
 }
 
-function cycleStatus(repo, number) {
+async function cycleStatus(repo, number) {
   const cycle = ['todo', 'in-progress', 'done'];
   const issue = getState().issues.find(i => i.repo_full === repo && i.number === number);
   if (!issue) return;
@@ -619,10 +625,19 @@ function cycleStatus(repo, number) {
   const promises = [];
   if (current !== 'todo') promises.push(removeLabel(owner, repoName, number, `status:${current}`).catch(() => { }));
   promises.push(addLabel(owner, repoName, number, label));
-  Promise.all(promises).then(() => {
+  try {
+    await Promise.all(promises);
     showToast(`Status set to ${STATUS_LABELS[next]}`, 'success');
-    loadAllIssues();
-  }).catch(e => showToast(e.message, 'error'));
+    await loadAllIssues();
+    const updated = getState().issues.find(i => i.repo_full === repo && i.number === number);
+    if (updated) {
+      setState({ selectedIssue: updated });
+      render();
+      loadComments(repo, number);
+    }
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 }
 
 export function openSettings() {
