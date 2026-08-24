@@ -5,9 +5,11 @@ import {
 import {
   setToken, getToken, isAuthed, getRateLimit, fetchWithPagination, getCurrentUser,
   getUserRepos, getUserOrgs, getOrgRepos, getIssues, getIssueComments, postComment,
-  updateIssue, addLabel, removeLabel, formatIssueForDisplay, API_BASE,
+  updateIssue, addLabel, removeLabel, formatIssueForDisplay,
 } from './api/github.js';
 import { getState, setState, subscribe, loadPersisted, persistLayout, persistTheme } from './state/store.js';
+
+const API_BASE = 'https://api.github.com';
 
 let toastContainer = null;
 
@@ -541,7 +543,7 @@ export function logout() {
 
 async function openIssue(repo, number) {
   try {
-    const issue = await fetch(`${API_BASE}/repos/${repo}/issues/${number}`, {
+    const issue = await fetch(`https://api.github.com/repos/${repo}/issues/${number}`, {
       headers: { 'Accept': 'application/vnd.github+json', 'Authorization': `Bearer ${getToken()}`, 'X-GitHub-Api-Version': '2022-11-28' },
     }).then(r => r.json());
     const formatted = formatIssueForDisplay(issue);
