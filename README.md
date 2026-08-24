@@ -13,7 +13,7 @@
 - **Priority ranking** — Issues are ranked by severity derived from labels (`priority: critical`, `high`, `medium`, `low`)
 - **Status simulation** — Simulate workflow with `status: todo`, `in-progress`, `done` labels
 - **Full-text search** — Search across issue titles and bodies in real time
-- **Filter & sort** — Filter by repo, state, and label; sort by priority, date, repo, or comments
+- **Filter & sort** — Filter by repo, state, and assignee; sort by priority, date, repo, or comments
 - **Inline management** — Close/reopen issues, add comments, and cycle status labels directly from the UI
 - **5 themes** — Dark, Light, Colorful, Neon, and Pink
 - **Layout export/import** — Download/upload your layout config as JSON to move between machines
@@ -43,7 +43,7 @@
 ## Quick Start
 
 1. Open the app in your browser (GitHub Pages or local)
-2. Click **Use Personal Access Token** and paste your token
+2. Click **Connect with PAT** and paste your token
 3. Browse, search, filter, and manage your issues
 
 ## Authentication
@@ -88,7 +88,7 @@ You can fork this repo, add your exported layout file, and deploy your own perso
 1. Fork the repository
 2. (Optional) Add your `issuez-layout.json` to the root of the fork
 3. Go to **Settings → Pages** in your fork
-4. Set **Source** to `Deploy from a branch` and select `main` / `/root` (or `/dist` if using the single-file build)
+4. Set **Source** to `Deploy from a branch` and select `main` / `/dist`
 5. Your personalized instance is live at `https://<your-username>.github.io/issuez/`
 
 No backend, no server setup, no data storage — just your layout and themes applied instantly.
@@ -97,7 +97,7 @@ No backend, no server setup, no data storage — just your layout and themes app
 
 ### Single-File Build
 
-The production build bundles all CSS and JavaScript into a single `dist/index.html` file. This makes deployment to GitHub Pages trivial — just enable Pages and point it at the `dist` folder (or root if you copy `index.html` there).
+The production build bundles all CSS and JavaScript into a single `dist/index.html` file using `vite-plugin-singlefile`. This makes deployment to GitHub Pages trivial — just enable Pages and point it at the `dist` folder.
 
 ### Development
 
@@ -111,9 +111,10 @@ Open http://localhost:3000 to see the app in development mode.
 ### Build
 
 ```bash
-npm run build       # Standard Vite build (dist/ + assets/)
-npm run build:single # Single-file HTML output (dist/index.html)
+npm run build       # Single-file HTML output (dist/index.html)
 ```
+
+The build uses `vite-plugin-singlefile` to bundle all CSS and JavaScript into a single `dist/index.html` file.
 
 ### API
 
