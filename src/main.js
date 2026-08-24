@@ -601,13 +601,13 @@ async function toggleIssueState(repo, number) {
     const newState = issue.state === 'open' ? 'closed' : 'open';
     await updateIssue(repo.split('/')[0], repo.split('/')[1], number, { state: newState });
     showToast(`Issue ${newState}`, 'success');
-    await loadAllIssues();
-    const updated = getState().issues.find(i => i.repo_full === repo && i.number === number);
-    if (updated) {
-      setState({ selectedIssue: updated });
-      render();
-      requestAnimationFrame(() => loadComments(repo, number));
-    }
+    const updated = { ...issue, state: newState };
+    setState({
+      issues: getState().issues.map(i => i.repo_full === repo && i.number === number ? updated : i),
+      selectedIssue: updated,
+    });
+    render();
+    setTimeout(() => loadComments(repo, number), 50);
   } catch (e) {
     showToast(e.message, 'error');
   }
@@ -628,13 +628,13 @@ async function cycleStatus(repo, number) {
   try {
     await Promise.all(promises);
     showToast(`Status set to ${STATUS_LABELS[next]}`, 'success');
-    await loadAllIssues();
-    const updated = getState().issues.find(i => i.repo_full === repo && i.number === number);
-    if (updated) {
-      setState({ selectedIssue: updated });
-      render();
-      requestAnimationFrame(() => loadComments(repo, number));
-    }
+    const updated = { ...issue, status: next };
+    setState({
+      issues: getState().issues.map(i => i.repo_full === repo && i.number === number ? updated : i),
+      selectedIssue: updated,
+    });
+    render();
+    setTimeout(() => loadComments(repo, number), 50);
   } catch (e) {
     showToast(e.message, 'error');
   }
