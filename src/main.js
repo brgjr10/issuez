@@ -66,19 +66,24 @@ function renderAuth() {
       <div class="auth-card fade-in">
         <h1>Issuez</h1>
         <p>Cross-repo GitHub issue tracker. No server, no storage — just you and GitHub.</p>
+        <div style="text-align:left; margin-bottom:1rem;">
+          <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+            <strong>How to get a PAT:</strong>
+          </p>
+          <ol style="font-size:0.85rem; color:var(--text-secondary); padding-left:1.2rem; line-height:1.8;">
+            <li>Go to <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a></li>
+            <li>Click <strong>Generate new token (classic)</strong></li>
+            <li>Select scopes: <code style="background:var(--bg-tertiary); padding:0.1rem 0.3rem; border-radius:4px;">repo</code> and <code style="background:var(--bg-tertiary); padding:0.1rem 0.3rem; border-radius:4px;">read:org</code></li>
+            <li>Copy the token and paste it below</li>
+          </ol>
+        </div>
         <div class="auth-methods">
-          <button class="primary" id="btn-oauth" onclick="window._oauthLogin()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-            Sign in with GitHub
-          </button>
-          <div class="auth-divider">or</div>
-          <button onclick="window._showPatForm()">Use Personal Access Token</button>
-        </div>
-        <div id="pat-form" style="display:none; margin-top:1rem; text-align:left;">
-          <label style="font-size:0.85rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">GitHub PAT (repo, read:org scopes)</label>
           <input type="password" id="pat-input" placeholder="ghp_..." style="margin-bottom:0.5rem;">
-          <button class="primary" style="width:100%;" onclick="window._patLogin()">Connect</button>
+          <button class="primary" style="width:100%;" onclick="window._patLogin()">Connect with PAT</button>
         </div>
+        <p style="margin-top:1rem; font-size:0.8rem; color:var(--text-muted);">
+          Your token stays in memory only. It is never stored or sent anywhere except GitHub.
+        </p>
       </div>
     </div>
   `;
@@ -493,43 +498,6 @@ async function loadAllIssues() {
   }
 }
 
-export async function oauthLogin() {
-  const clientId = 'Ov23liuNfU5HZlmG3mRd'; // Users must set this or use PAT
-  const redirectUri = window.location.origin + window.location.pathname;
-  const state = Math.random().toString(36).slice(2);
-  sessionStorage.setItem('oauth_state', state);
-  const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,read:org&state=${state}`;
-  window.location.href = url;
-}
-
-export async function handleOAuthCallback() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  const state = params.get('state');
-  if (!code) return false;
-  const saved = sessionStorage.getItem('oauth_state');
-  if (state !== saved) { showToast('OAuth state mismatch', 'error'); return false; }
-  sessionStorage.removeItem('oauth_state');
-  try {
-    const res = await fetch('https://github.com/login/oauth/access_token', {
-      method: 'POST',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: '', client_secret: '', code }),
-    });
-    const data = await res.json();
-    if (data.access_token) {
-      setToken(data.access_token);
-      sessionStorage.setItem(STORAGE_KEY, data.access_token);
-      window.history.replaceState({}, document.title, window.location.pathname);
-      await initApp();
-      return true;
-    }
-  } catch (e) {
-    showToast('OAuth failed: ' + e.message, 'error');
-  }
-  return false;
-}
-
 export function patLogin(pat) {
   setToken(pat);
   sessionStorage.setItem(STORAGE_KEY, pat);
@@ -691,8 +659,6 @@ async function initApp() {
 function setupGlobals() {
   window._setTheme = (t) => { setState({ theme: t }); applyTheme(t); persistTheme(); };
   window._logout = logout;
-  window._oauthLogin = oauthLogin;
-  window._showPatForm = () => { $('#pat-form').style.display = $('#pat-form').style.display === 'none' ? 'block' : 'none'; };
   window._patLogin = () => {
     const val = $('#pat-input')?.value?.trim();
     if (!val) return showToast('Enter a PAT', 'warning');
@@ -740,9 +706,7 @@ async function boot() {
   applyTheme(getState().theme);
   setupGlobals();
   subscribe(render);
-
-  const handled = await handleOAuthCallback();
-  if (!handled) await initApp();
+  await initApp();
 }
 
 if (document.readyState === 'loading') {

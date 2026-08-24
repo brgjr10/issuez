@@ -43,30 +43,18 @@
 ## Quick Start
 
 1. Open the app in your browser (GitHub Pages or local)
-2. Click **Sign in with GitHub** (OAuth) or **Use Personal Access Token**
+2. Click **Use Personal Access Token** and paste your token
 3. Browse, search, filter, and manage your issues
 
 ## Authentication
 
-### Option A: GitHub OAuth (Recommended)
-
-1. Create a GitHub OAuth App at https://github.com/settings/developers
-   - Homepage URL: `https://<your-username>.github.io/issuez/`
-   - Authorization callback URL: `https://<your-username>.github.io/issuez/`
-   - Note: For local development, use `http://localhost:3000`
-2. Copy the **Client ID**
-3. Paste it into `src/main.js` line 5 where `const clientId = '';`
-4. Redeploy
-
-The app uses the standard OAuth authorization code flow. The token is stored in `sessionStorage` only — it is never persisted to disk or sent to any server other than GitHub.
-
-### Option B: Personal Access Token (PAT)
+Issuez runs entirely client-side, so it uses a **Personal Access Token (PAT)** instead of OAuth. GitHub’s OAuth `access_token` endpoint blocks browser requests via CORS, so a backend would be required for OAuth.
 
 1. Go to https://github.com/settings/tokens
 2. Generate a new token (classic) with scopes:
    - `repo` (to read and write issues)
    - `read:org` (to list organization repositories)
-3. Paste the token into the **Use Personal Access Token** field
+3. Paste the token into the login field
 4. Click **Connect**
 
 **Security note:** Your token is held in browser memory only (`sessionStorage`). It is discarded when you close the tab or log out. It is never written to `localStorage`, cookies, or any persistent storage.
@@ -154,7 +142,7 @@ The app uses the GitHub REST API v3:
 - **No persistent storage** — Your token is held in memory (`sessionStorage`) only and is discarded when you close the tab or log out
 - **No cookies, no localStorage for tokens** — Only layout preferences and theme are stored locally
 - **Direct GitHub API** — All requests go directly to GitHub; no proxy or intermediary
-- **Revocable access** — You can revoke your PAT or OAuth access at any time from GitHub Settings → Applications
+- **Revocable access** — You can revoke your PAT at any time from GitHub Settings → Applications
 
 ## Roadmap
 
