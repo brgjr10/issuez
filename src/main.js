@@ -217,7 +217,7 @@ function renderTable() {
               <tr>
                 <td><span style="font-weight:500; font-size:0.8rem;">${escapeHtml(issue.repo)}</span></td>
                 <td>
-                  <span class="priority-badge priority-${issue.priority || 'none'}">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
+                   <span class="priority-badge priority-${issue.priority || 'none'}" onclick="window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
                 </td>
                 <td>
                   <span class="issue-title" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">${escapeHtml(issue.title)}</span>
@@ -332,7 +332,7 @@ function renderIssueModal() {
               <span>&#183;</span>
               <span>#${issue.number}</span>
               <span>&#183;</span>
-              <span class="priority-badge priority-${issue.priority || 'none'}">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
+            <span class="priority-badge priority-${issue.priority || 'none'}" onclick="event.stopPropagation(); window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
               <span>&#183;</span>
               <span class="status-badge status-${issue.status || 'todo'}" onclick="window._cycleStatusFromModal()">${STATUS_LABELS[issue.status] || 'To Do'}</span>
             </div>
@@ -655,6 +655,35 @@ async function cycleStatus(repo, number) {
   }
 }
 
+async function cyclePriority(repo, number) {
+  const cycle = ['critical', 'high', 'medium', 'low'];
+  const issue = getState().issues.find(i => i.repo_full === repo && i.number === number);
+  if (!issue) return;
+  const current = issue.priority || 'none';
+  const currentIndex = cycle.indexOf(current);
+  const next = currentIndex >= 0 ? cycle[(currentIndex + 1) % cycle.length] : 'critical';
+  const label = `priority:${next}`;
+  const owner = repo.split('/')[0];
+  const repoName = repo.split('/')[1];
+  const promises = [];
+  if (currentIndex >= 0) promises.push(removeLabel(owner, repoName, number, `priority:${current}`).catch(() => { }));
+  promises.push(addLabel(owner, repoName, number, label));
+  try {
+    await Promise.all(promises);
+    showToast(`Priority set to ${PRIORITY_LABELS[next]}`, 'success');
+    const updated = { ...issue, priority: next };
+    setState({
+      issues: getState().issues.map(i => i.repo_full === repo && i.number === number ? updated : i),
+      filteredIssues: getState().filteredIssues.map(i => i.repo_full === repo && i.number === number ? updated : i),
+      selectedIssue: updated,
+    });
+    render();
+    setTimeout(() => loadComments(repo, number), 50);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
 async function setPriorityFromModal(priority) {
   const issue = getState().selectedIssue;
   if (!issue) return;
@@ -795,6 +824,7 @@ function setupGlobals() {
     toggleIssueState(issue.repo_full, issue.number);
   };
   window._cycleStatus = cycleStatus;
+  window._cyclePriority = cyclePriority;
   window._cycleStatusFromModal = () => {
     const issue = getState().selectedIssue;
     if (!issue) return;
