@@ -435,7 +435,6 @@ function render() {
       ${renderCards()}
     </main>
     ${renderIssueModal()}
-    ${renderSettings()}
     <div class="toast-container" id="toast-container"></div>
   `;
 
