@@ -604,6 +604,7 @@ async function toggleIssueState(repo, number) {
     const updated = { ...issue, state: newState };
     setState({
       issues: getState().issues.map(i => i.repo_full === repo && i.number === number ? updated : i),
+      filteredIssues: getState().filteredIssues.map(i => i.repo_full === repo && i.number === number ? updated : i),
       selectedIssue: updated,
     });
     render();
@@ -631,6 +632,7 @@ async function cycleStatus(repo, number) {
     const updated = { ...issue, status: next };
     setState({
       issues: getState().issues.map(i => i.repo_full === repo && i.number === number ? updated : i),
+      filteredIssues: getState().filteredIssues.map(i => i.repo_full === repo && i.number === number ? updated : i),
       selectedIssue: updated,
     });
     render();
