@@ -346,9 +346,21 @@ function renderIssueModal() {
           </div>
           <div class="modal-section">
             <h3>Actions</h3>
-            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
               <button onclick="window._toggleIssueStateFromModal()">${issue.state === 'open' ? 'Close Issue' : 'Reopen Issue'}</button>
-              <button onclick="window._cycleStatusFromModal()">Set Status: ${STATUS_LABELS[issue.status] ? ['todo', 'in-progress', 'done'][(['todo', 'in-progress', 'done'].indexOf(issue.status) + 1) % 3] : 'To Do'}</button>
+              <select id="modal-priority" onchange="window._setPriorityFromModal(this.value)" style="width:auto; min-width:120px;">
+                <option value="">Set Priority...</option>
+                <option value="critical" ${issue.priority === 'critical' ? 'selected' : ''}>Critical</option>
+                <option value="high" ${issue.priority === 'high' ? 'selected' : ''}>High</option>
+                <option value="medium" ${issue.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="low" ${issue.priority === 'low' ? 'selected' : ''}>Low</option>
+              </select>
+              <select id="modal-status" onchange="window._setStatusFromModal(this.value)" style="width:auto; min-width:140px;">
+                <option value="">Set Status...</option>
+                <option value="todo" ${issue.status === 'todo' ? 'selected' : ''}>To Do</option>
+                <option value="in-progress" ${issue.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                <option value="done" ${issue.status === 'done' ? 'selected' : ''}>Done</option>
+              </select>
             </div>
           </div>
           <div class="modal-section">
@@ -643,6 +655,56 @@ async function cycleStatus(repo, number) {
   }
 }
 
+async function setPriorityFromModal(priority) {
+  const issue = getState().selectedIssue;
+  if (!issue) return;
+  if (!priority) return;
+  const owner = issue.repo_full.split('/')[0];
+  const repoName = issue.repo_full.split('/')[1];
+  const promises = [];
+  if (issue.priority) promises.push(removeLabel(owner, repoName, issue.number, `priority:${issue.priority}`).catch(() => { }));
+  promises.push(addLabel(owner, repoName, issue.number, `priority:${priority}`));
+  try {
+    await Promise.all(promises);
+    showToast(`Priority set to ${PRIORITY_LABELS[priority]}`, 'success');
+    const updated = { ...issue, priority };
+    setState({
+      issues: getState().issues.map(i => i.repo_full === issue.repo_full && i.number === issue.number ? updated : i),
+      filteredIssues: getState().filteredIssues.map(i => i.repo_full === issue.repo_full && i.number === issue.number ? updated : i),
+      selectedIssue: updated,
+    });
+    render();
+    setTimeout(() => loadComments(issue.repo_full, issue.number), 50);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function setStatusFromModal(status) {
+  const issue = getState().selectedIssue;
+  if (!issue) return;
+  if (!status) return;
+  const owner = issue.repo_full.split('/')[0];
+  const repoName = issue.repo_full.split('/')[1];
+  const promises = [];
+  if (issue.status && issue.status !== 'todo') promises.push(removeLabel(owner, repoName, issue.number, `status:${issue.status}`).catch(() => { }));
+  promises.push(addLabel(owner, repoName, issue.number, `status:${status}`));
+  try {
+    await Promise.all(promises);
+    showToast(`Status set to ${STATUS_LABELS[status]}`, 'success');
+    const updated = { ...issue, status };
+    setState({
+      issues: getState().issues.map(i => i.repo_full === issue.repo_full && i.number === issue.number ? updated : i),
+      filteredIssues: getState().filteredIssues.map(i => i.repo_full === issue.repo_full && i.number === issue.number ? updated : i),
+      selectedIssue: updated,
+    });
+    render();
+    setTimeout(() => loadComments(issue.repo_full, issue.number), 50);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
 export function openSettings() {
   setState({ showSettings: true });
 }
@@ -738,6 +800,8 @@ function setupGlobals() {
     if (!issue) return;
     cycleStatus(issue.repo_full, issue.number);
   };
+  window._setPriorityFromModal = setPriorityFromModal;
+  window._setStatusFromModal = setStatusFromModal;
   window._submitComment = submitComment;
   window._exportLayout = exportLayout;
   window._importLayout = importLayout;
