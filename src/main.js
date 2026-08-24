@@ -588,7 +588,7 @@ async function submitComment() {
     await postComment(issue.repo_full.split('/')[0], issue.repo_full.split('/')[1], issue.number, body);
     input.value = '';
     showToast('Comment posted', 'success');
-    loadComments(issue.repo, issue.number);
+    loadComments(issue.repo_full, issue.number);
   } catch (e) {
     showToast(e.message, 'error');
   }
@@ -712,13 +712,13 @@ function setupGlobals() {
   window._toggleIssueStateFromModal = () => {
     const issue = getState().selectedIssue;
     if (!issue) return;
-    toggleIssueState(issue.repo, issue.number);
+    toggleIssueState(issue.repo_full, issue.number);
   };
   window._cycleStatus = cycleStatus;
   window._cycleStatusFromModal = () => {
     const issue = getState().selectedIssue;
     if (!issue) return;
-    cycleStatus(issue.repo, issue.number);
+    cycleStatus(issue.repo_full, issue.number);
   };
   window._submitComment = submitComment;
   window._exportLayout = exportLayout;
