@@ -606,7 +606,7 @@ async function toggleIssueState(repo, number) {
     if (updated) {
       setState({ selectedIssue: updated });
       render();
-      loadComments(repo, number);
+      requestAnimationFrame(() => loadComments(repo, number));
     }
   } catch (e) {
     showToast(e.message, 'error');
@@ -633,7 +633,7 @@ async function cycleStatus(repo, number) {
     if (updated) {
       setState({ selectedIssue: updated });
       render();
-      loadComments(repo, number);
+      requestAnimationFrame(() => loadComments(repo, number));
     }
   } catch (e) {
     showToast(e.message, 'error');
