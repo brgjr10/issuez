@@ -12,13 +12,14 @@ const state = {
   filterRepo: 'all',
   filterLabel: 'all',
   filterState: 'all',
-  filterAssignee: 'me',
+  filterAssignee: 'all',
   sortBy: 'priority',
   sortDir: 'asc',
   theme: 'dark',
   layout: null,
   rateLimit: { remaining: 5000, reset: 0 },
   showSettings: false,
+  showWelcome: false,
 };
 
 const listeners = new Set();

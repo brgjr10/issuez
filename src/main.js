@@ -114,6 +114,13 @@ function renderToolbar() {
             <option value="closed" ${s.filterState === 'closed' ? 'selected' : ''}>Closed</option>
           </select>
         </div>
+        <div class="filter-group">
+          <label>Assignee</label>
+          <select id="filter-assignee" onchange="window._setFilter('assignee', this.value)">
+            <option value="all" ${s.filterAssignee === 'all' ? 'selected' : ''}>All</option>
+            <option value="me" ${s.filterAssignee === 'me' ? 'selected' : ''}>Assigned to me</option>
+          </select>
+        </div>
       </div>
       <div class="toolbar-right">
         <button onclick="window._refresh()" title="Refresh">
@@ -400,6 +407,25 @@ function renderSettings() {
   `;
 }
 
+function renderWelcome() {
+  return html`
+    <div class="modal-overlay" onclick="if(event.target===this)window._closeWelcome()">
+      <div class="modal" style="max-width:520px; text-align:center;">
+        <div class="modal-header" style="justify-content:center; border-bottom:none;">
+          <h2 style="font-size:1.5rem;">Welcome to Issuez</h2>
+        </div>
+        <div class="modal-body">
+          <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.95rem;">
+            Your cross-repo GitHub issue dashboard is ready.
+            Browse, search, and manage issues across all your repositories in one place.
+          </p>
+          <button class="primary" onclick="window._closeWelcome()" style="min-width:160px;">Get Started</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderError() {
   const s = getState();
   if (!s.error) return '';
@@ -436,6 +462,7 @@ function render() {
     </main>
     ${renderIssueModal()}
     ${s.showSettings ? renderSettings() : ''}
+    ${s.showWelcome ? renderWelcome() : ''}
     <div class="toast-container" id="toast-container"></div>
   `;
 
@@ -502,13 +529,13 @@ export async function patLogin(pat) {
   setToken(pat);
   sessionStorage.setItem(STORAGE_KEY, pat);
   await initApp();
-  showToast('Welcome to Issuez! Your cross-repo issue dashboard is loading.', 'info');
+  setState({ showWelcome: true });
 }
 
 export function logout() {
   setToken(null);
   sessionStorage.removeItem(STORAGE_KEY);
-  setState({ user: null, issues: [], filteredIssues: [], selectedIssue: null, error: null });
+  setState({ user: null, issues: [], filteredIssues: [], selectedIssue: null, error: null, showWelcome: false });
   render();
 }
 
@@ -664,6 +691,7 @@ function setupGlobals() {
   window._setFilter = (key, val) => {
     if (key === 'repo') setState({ filterRepo: val });
     if (key === 'state') setState({ filterState: val });
+    if (key === 'assignee') setState({ filterAssignee: val });
     filterIssues();
   };
   window._setSort = (key) => {
@@ -678,6 +706,7 @@ function setupGlobals() {
   window._closeIssue = () => { setState({ selectedIssue: null }); render(); };
   window._openSettings = openSettings;
   window._closeSettings = closeSettings;
+  window._closeWelcome = () => { setState({ showWelcome: false }); render(); };
   window._toggleIssueState = toggleIssueState;
   window._toggleIssueStateFromModal = () => {
     const issue = getState().selectedIssue;
