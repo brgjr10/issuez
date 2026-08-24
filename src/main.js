@@ -435,6 +435,7 @@ function render() {
       ${renderCards()}
     </main>
     ${renderIssueModal()}
+    ${s.showSettings ? renderSettings() : ''}
     <div class="toast-container" id="toast-container"></div>
   `;
 
@@ -497,10 +498,11 @@ async function loadAllIssues() {
   }
 }
 
-export function patLogin(pat) {
+export async function patLogin(pat) {
   setToken(pat);
   sessionStorage.setItem(STORAGE_KEY, pat);
-  initApp();
+  await initApp();
+  showToast('Welcome to Issuez! Your cross-repo issue dashboard is loading.', 'info');
 }
 
 export function logout() {
@@ -596,16 +598,11 @@ function cycleStatus(repo, number) {
 }
 
 export function openSettings() {
-  const el = renderSettings();
-  const container = document.createElement('div');
-  container.id = 'settings-modal';
-  container.innerHTML = el;
-  document.body.appendChild(container);
+  setState({ showSettings: true });
 }
 
 export function closeSettings() {
-  const el = $('#settings-modal');
-  if (el) el.remove();
+  setState({ showSettings: false });
 }
 
 export function exportLayout() {

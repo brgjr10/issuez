@@ -18,6 +18,7 @@ const state = {
   theme: 'dark',
   layout: null,
   rateLimit: { remaining: 5000, reset: 0 },
+  showSettings: false,
 };
 
 const listeners = new Set();
