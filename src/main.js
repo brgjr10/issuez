@@ -44,11 +44,11 @@ function renderHeader() {
       </div>
       <div class="header-actions">
         <select id="theme-select" onchange="window._setTheme(this.value)">
-          <option value="dark" ${s.theme==='dark'?'selected':''}>Dark</option>
-          <option value="light" ${s.theme==='light'?'selected':''}>Light</option>
-          <option value="colorful" ${s.theme==='colorful'?'selected':''}>Colorful</option>
-          <option value="neon" ${s.theme==='neon'?'selected':''}>Neon</option>
-          <option value="pink" ${s.theme==='pink'?'selected':''}>Pink</option>
+          <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dark</option>
+          <option value="light" ${s.theme === 'light' ? 'selected' : ''}>Light</option>
+          <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
+          <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
+          <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
         </select>
         <div class="user-info">
           <img class="user-avatar" src="${s.user?.avatar_url || ''}" alt="">
@@ -98,15 +98,15 @@ function renderToolbar() {
           <label>Repo</label>
           <select id="filter-repo" onchange="window._setFilter('repo', this.value)">
             <option value="all">All</option>
-            ${repos.map(r => html`<option value="${escapeHtml(r)}" ${s.filterRepo===r?'selected':''}>${escapeHtml(r)}</option>`).join('')}
+            ${repos.map(r => html`<option value="${escapeHtml(r)}" ${s.filterRepo === r ? 'selected' : ''}>${escapeHtml(r)}</option>`).join('')}
           </select>
         </div>
         <div class="filter-group">
           <label>State</label>
           <select id="filter-state" onchange="window._setFilter('state', this.value)">
-            <option value="all" ${s.filterState==='all'?'selected':''}>All</option>
-            <option value="open" ${s.filterState==='open'?'selected':''}>Open</option>
-            <option value="closed" ${s.filterState==='closed'?'selected':''}>Closed</option>
+            <option value="all" ${s.filterState === 'all' ? 'selected' : ''}>All</option>
+            <option value="open" ${s.filterState === 'open' ? 'selected' : ''}>Open</option>
+            <option value="closed" ${s.filterState === 'closed' ? 'selected' : ''}>Closed</option>
           </select>
         </div>
       </div>
@@ -334,7 +334,7 @@ function renderIssueModal() {
             <h3>Actions</h3>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
               <button onclick="window._toggleIssueStateFromModal()">${issue.state === 'open' ? 'Close Issue' : 'Reopen Issue'}</button>
-              <button onclick="window._cycleStatusFromModal()">Set Status: ${STATUS_LABELS[issue.status] ? ['todo','in-progress','done'][(['todo','in-progress','done'].indexOf(issue.status)+1)%3] : 'To Do'}</button>
+              <button onclick="window._cycleStatusFromModal()">Set Status: ${STATUS_LABELS[issue.status] ? ['todo', 'in-progress', 'done'][(['todo', 'in-progress', 'done'].indexOf(issue.status) + 1) % 3] : 'To Do'}</button>
             </div>
           </div>
           <div class="modal-section">
@@ -367,11 +367,11 @@ function renderSettings() {
             <div class="settings-card">
               <h3>&#127912; Theme</h3>
               <select id="settings-theme" onchange="window._setTheme(this.value)" style="margin-bottom:0.5rem;">
-                <option value="dark" ${s.theme==='dark'?'selected':''}>Dark</option>
-                <option value="light" ${s.theme==='light'?'selected':''}>Light</option>
-                <option value="colorful" ${s.theme==='colorful'?'selected':''}>Colorful</option>
-                <option value="neon" ${s.theme==='neon'?'selected':''}>Neon</option>
-                <option value="pink" ${s.theme==='pink'?'selected':''}>Pink</option>
+                <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dark</option>
+                <option value="light" ${s.theme === 'light' ? 'selected' : ''}>Light</option>
+                <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
+                <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
+                <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
               </select>
             </div>
             <div class="settings-card">
@@ -494,7 +494,7 @@ async function loadAllIssues() {
 }
 
 export async function oauthLogin() {
-  const clientId = ''; // Users must set this or use PAT
+  const clientId = 'Ov23liuNfU5HZlmG3mRd'; // Users must set this or use PAT
   const redirectUri = window.location.origin + window.location.pathname;
   const state = Math.random().toString(36).slice(2);
   sessionStorage.setItem('oauth_state', state);
@@ -620,7 +620,7 @@ function cycleStatus(repo, number) {
   const owner = repo.split('/')[0];
   const repoName = repo.split('/')[1];
   const promises = [];
-  if (current !== 'todo') promises.push(removeLabel(owner, repoName, number, `status:${current}`).catch(() => {}));
+  if (current !== 'todo') promises.push(removeLabel(owner, repoName, number, `status:${current}`).catch(() => { }));
   promises.push(addLabel(owner, repoName, number, label));
   Promise.all(promises).then(() => {
     showToast(`Status set to ${STATUS_LABELS[next]}`, 'success');
