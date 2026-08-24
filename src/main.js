@@ -9,7 +9,6 @@ import {
 } from './api/github.js';
 import { getState, setState, subscribe, loadPersisted, persistLayout, persistTheme } from './state/store.js';
 
-const API_BASE = 'https://api.github.com';
 
 let toastContainer = null;
 

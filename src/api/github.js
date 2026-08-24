@@ -96,7 +96,7 @@ export async function getIssues(owner, repo, state = 'open') {
 }
 
 export async function getIssueComments(owner, repo, issueNumber) {
-  const res = await fetchWithPagination(`/repos/${owner}/${repo}/issues/${issueNumber}/comments?per_page=100`);
+  const res = await fetchWithPagination(`/repos/${owner}/${repo}/issues/${issueNumber}/comments`);
   return res;
 }
 
@@ -137,6 +137,14 @@ export function formatIssueForDisplay(issue) {
   const labels = issue.labels.map(l => ({ name: l.name, color: l.color }));
   const priority = labels.find(l => l.name.startsWith('priority:'))?.name.replace('priority:', '') || null;
   const status = labels.find(l => l.name.startsWith('status:'))?.name.replace('status:', '') || null;
+
+  const repoUrl = issue.repository_url || '';
+  const urlParts = repoUrl.split("/").filter(Boolean);
+  const repo = urlParts[urlParts.length - 1] || "unknown";
+  const owner = urlParts[urlParts.length - 2] || "unknown";
+  const repo_full = `${owner}/${repo}`;
+  
+
   return {
     id: issue.id,
     number: issue.number,
@@ -148,8 +156,8 @@ export function formatIssueForDisplay(issue) {
     updated_at: issue.updated_at,
     comments: issue.comments,
     user: { login: issue.user.login, avatar_url: issue.user.avatar_url },
-    repo: issue.repository_url?.split('/').pop() || 'unknown',
-    repo_full: `${issue.repository_url?.split('/').slice(-2).join('/') || 'unknown/unknown'}`,
+    repo,
+    repo_full,
     labels,
     priority,
     status,
