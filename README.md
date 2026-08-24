@@ -19,7 +19,10 @@
 - **Layout export/import** — Download/upload your layout config as JSON to move between machines
 - **Client-side only** — Runs entirely in the browser with no backend server
 
+
 ## Screenshots
+<details>
+  <summary>Click to expand</summary>
 
 ### Dark Theme
 ![Dark Theme](assets/screenshot-dark.svg)
@@ -35,6 +38,7 @@
 
 ### Pink Theme
 ![Pink Theme](assets/screenshot-pink.svg)
+</details>
 
 ## Quick Start
 
