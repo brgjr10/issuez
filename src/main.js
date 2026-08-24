@@ -595,7 +595,7 @@ async function submitComment() {
 }
 
 async function toggleIssueState(repo, number) {
-  const issue = getState().issues.find(i => i.repo === repo && i.number === number);
+  const issue = getState().issues.find(i => i.repo_full === repo && i.number === number);
   if (!issue) return;
   try {
     const newState = issue.state === 'open' ? 'closed' : 'open';
@@ -609,7 +609,7 @@ async function toggleIssueState(repo, number) {
 
 function cycleStatus(repo, number) {
   const cycle = ['todo', 'in-progress', 'done'];
-  const issue = getState().issues.find(i => i.repo === repo && i.number === number);
+  const issue = getState().issues.find(i => i.repo_full === repo && i.number === number);
   if (!issue) return;
   const current = issue.status || 'todo';
   const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
