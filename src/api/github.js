@@ -1,6 +1,6 @@
 import { escapeHtml, formatDate, timeAgo } from '../utils/helpers.js';
 
-const API_BASE = 'https://api.github.com';
+export const API_BASE = 'https://api.github.com';
 const PER_PAGE = 100;
 
 let token = null;

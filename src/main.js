@@ -5,7 +5,7 @@ import {
 import {
   setToken, getToken, isAuthed, getRateLimit, fetchWithPagination, getCurrentUser,
   getUserRepos, getUserOrgs, getOrgRepos, getIssues, getIssueComments, postComment,
-  updateIssue, addLabel, removeLabel, formatIssueForDisplay,
+  updateIssue, addLabel, removeLabel, formatIssueForDisplay, API_BASE,
 } from './api/github.js';
 import { getState, setState, subscribe, loadPersisted, persistLayout, persistTheme } from './state/store.js';
 
