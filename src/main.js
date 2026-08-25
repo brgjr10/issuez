@@ -298,7 +298,7 @@ function renderCards() {
                 <span>${timeAgo(issue.updated_at)}</span>
               </div>
             </div>
-            <span class="priority-badge priority-${issue.priority || 'none'}">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
+            <span class="priority-badge priority-${issue.priority || 'none'}" onclick="event.stopPropagation(); window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
           </div>
           <div class="issue-card-footer">
             <span class="status-badge status-${issue.status || 'todo'}" onclick="event.stopPropagation(); window._cycleStatus('${issue.repo_full}', ${issue.number})">
