@@ -5,7 +5,7 @@
 
 **Issuez** aggregates every issue assigned to you across all your GitHub repositories and organizations into a single, modern dashboard — no organization setup required.
 
-![Issuez Dashboard](assets/screenshot-dark.svg)
+<img width="1919" height="928" alt="Issuez Dashboard" src="https://github.com/user-attachments/assets/6859a83c-9541-4a38-939b-59ef5084809f" />
 
 ## Features
 
@@ -18,27 +18,6 @@
 - **5 themes** — Dark, Light, Colorful, Neon, and Pink
 - **Layout export/import** — Download/upload your layout config as JSON to move between machines
 - **Client-side only** — Runs entirely in the browser with no backend server
-
-
-## Screenshots
-<details>
-  <summary>Click to expand</summary>
-
-### Dark Theme
-![Dark Theme](assets/screenshot-dark.svg)
-
-### Light Theme
-![Light Theme](assets/screenshot-light.svg)
-
-### Colorful Theme
-![Colorful Theme](assets/screenshot-colorful.svg)
-
-### Neon Theme
-![Neon Theme](assets/screenshot-neon.svg)
-
-### Pink Theme
-![Pink Theme](assets/screenshot-pink.svg)
-</details>
 
 ## Quick Start
 
