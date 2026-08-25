@@ -8,6 +8,7 @@ import {
   updateIssue, addLabel, removeLabel, formatIssueForDisplay,
 } from './api/github.js';
 import { getState, setState, subscribe, loadPersisted, persistLayout, persistTheme } from './state/store.js';
+import './styles.css';
 
 
 let toastContainer = null;
@@ -555,7 +556,8 @@ async function loadAllIssues() {
 export async function patLogin(pat) {
   setToken(pat);
   sessionStorage.setItem(STORAGE_KEY, pat);
-  await initializeApp();
+  render();
+  await loadAllIssues();
   setState({ showWelcome: true });
 }
 
@@ -797,17 +799,6 @@ export function importLayout(fileInput) {
   reader.readAsText(file);
 }
 
-async function initializeApp() {
-  const stored = sessionStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    setToken(stored);
-    render();
-    await loadAllIssues();
-  } else {
-    render();
-  }
-}
-
 function setupGlobals() {
   window._setTheme = (t) => { setState({ theme: t }); applyTheme(t); persistTheme(); };
   window._logout = logout;
@@ -863,7 +854,14 @@ async function boot() {
   applyTheme(getState().theme);
   setupGlobals();
   subscribe(render);
-  await initializeApp();
+  const stored = sessionStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    setToken(stored);
+    render();
+    await loadAllIssues();
+  } else {
+    render();
+  }
 }
 
 if (document.readyState === 'loading') {

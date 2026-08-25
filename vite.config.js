@@ -10,6 +10,9 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: resolve(__dirname, 'index.html'),
+      output: {
+        hoistTransitiveImports: false,
+      },
     },
   },
   plugins: [
