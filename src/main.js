@@ -64,6 +64,19 @@ function renderHeader() {
           <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
           <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
           <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
+          <option value="pride" ${s.theme === 'pride' ? 'selected' : ''}>Pride</option>
+          <option value="lesbian" ${s.theme === 'lesbian' ? 'selected' : ''}>Lesbian</option>
+          <option value="transgender" ${s.theme === 'transgender' ? 'selected' : ''}>Transgender</option>
+          <option value="bisexual" ${s.theme === 'bisexual' ? 'selected' : ''}>Bisexual</option>
+          <option value="asexual" ${s.theme === 'asexual' ? 'selected' : ''}>Asexual</option>
+          <option value="pansexual" ${s.theme === 'pansexual' ? 'selected' : ''}>Pansexual</option>
+          <option value="genderfluid" ${s.theme === 'genderfluid' ? 'selected' : ''}>Genderfluid</option>
+          <option value="polysexual" ${s.theme === 'polysexual' ? 'selected' : ''}>Polysexual</option>
+          <option value="intersex" ${s.theme === 'intersex' ? 'selected' : ''}>Intersex</option>
+          <option value="genderqueer" ${s.theme === 'genderqueer' ? 'selected' : ''}>Genderqueer</option>
+          <option value="agender" ${s.theme === 'agender' ? 'selected' : ''}>Agender</option>
+          <option value="queerplatonic" ${s.theme === 'queerplatonic' ? 'selected' : ''}>Queerplatonic</option>
+          <option value="monosexual" ${s.theme === 'monosexual' ? 'selected' : ''}>Monosexual</option>
         </select>
         <div class="user-info">
           <img class="user-avatar" src="${s.user?.avatar_url || ''}" alt="">
@@ -235,7 +248,7 @@ function renderTable() {
                 </td>
                 <td>
                   <span class="issue-title" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">${escapeHtml(issue.title)}</span>
-                  <a class="issue-gh-link" href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>
+                   <a class="issue-gh-link" href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>
                   <span class="issue-number">#${issue.number}</span>
                 </td>
                 <td>
@@ -243,12 +256,12 @@ function renderTable() {
                      ${STATUS_LABELS[getStatus(issue)] || 'To Do'}
                    </span>
                 </td>
-                <td>
-                  <div class="label-list">
-                    ${issue.labels.slice(0, 3).map(l => html`<span class="label-chip" style="border-color:#${l.color}40; color:#${l.color};">${escapeHtml(l.name)}</span>`).join('')}
-                    ${issue.labels.length > 3 ? html`<span class="label-chip">+${issue.labels.length - 3}</span>` : ''}
-                  </div>
-                </td>
+                 <td>
+                   <div class="label-list">
+                     ${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).slice(0, 3).map(l => html`<span class="label-chip" style="border-color:#${l.color}40; color:#${l.color};">${escapeHtml(l.name)}</span>`).join('')}
+                     ${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).length > 3 ? html`<span class="label-chip">+${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).length - 3}</span>` : ''}
+                   </div>
+                 </td>
                 <td style="white-space:nowrap; font-size:0.8rem; color:var(--text-secondary);">${timeAgo(issue.updated_at)}</td>
                 <td>
                   <div class="issue-actions">
@@ -319,7 +332,7 @@ function renderCards() {
               ${STATUS_LABELS[getStatus(issue)] || 'To Do'}
             </span>
             <div class="label-list">
-              ${issue.labels.slice(0, 4).map(l => html`<span class="label-chip" style="border-color:#${l.color}40; color:#${l.color};">${escapeHtml(l.name)}</span>`).join('')}
+              ${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).slice(0, 4).map(l => html`<span class="label-chip" style="border-color:#${l.color}40; color:#${l.color};">${escapeHtml(l.name)}</span>`).join('')}
             </div>
             <button class="small" onclick="event.stopPropagation(); window._toggleIssueState('${issue.repo_full}', ${issue.number})" style="margin-left:auto;">
               ${issue.state === 'open' ? 'Close' : 'Reopen'}
@@ -407,12 +420,25 @@ function renderSettings() {
             <div class="settings-card">
               <h3>&#127912; Theme</h3>
               <select id="settings-theme" onchange="window._setTheme(this.value)" style="margin-bottom:0.5rem;">
-                <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dark</option>
-                <option value="light" ${s.theme === 'light' ? 'selected' : ''}>Light</option>
-                <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
-                <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
-                <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
-              </select>
+                 <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dark</option>
+                 <option value="light" ${s.theme === 'light' ? 'selected' : ''}>Light</option>
+                 <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
+                 <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
+                 <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
+                 <option value="pride" ${s.theme === 'pride' ? 'selected' : ''}>Pride</option>
+                 <option value="lesbian" ${s.theme === 'lesbian' ? 'selected' : ''}>Lesbian</option>
+                 <option value="transgender" ${s.theme === 'transgender' ? 'selected' : ''}>Transgender</option>
+                 <option value="bisexual" ${s.theme === 'bisexual' ? 'selected' : ''}>Bisexual</option>
+                 <option value="asexual" ${s.theme === 'asexual' ? 'selected' : ''}>Asexual</option>
+                 <option value="pansexual" ${s.theme === 'pansexual' ? 'selected' : ''}>Pansexual</option>
+                 <option value="genderfluid" ${s.theme === 'genderfluid' ? 'selected' : ''}>Genderfluid</option>
+                 <option value="polysexual" ${s.theme === 'polysexual' ? 'selected' : ''}>Polysexual</option>
+                 <option value="intersex" ${s.theme === 'intersex' ? 'selected' : ''}>Intersex</option>
+                 <option value="genderqueer" ${s.theme === 'genderqueer' ? 'selected' : ''}>Genderqueer</option>
+                 <option value="agender" ${s.theme === 'agender' ? 'selected' : ''}>Agender</option>
+                 <option value="queerplatonic" ${s.theme === 'queerplatonic' ? 'selected' : ''}>Queerplatonic</option>
+                 <option value="monosexual" ${s.theme === 'monosexual' ? 'selected' : ''}>Monosexual</option>
+               </select>
             </div>
             <div class="settings-card">
               <h3>&#128190; Export Layout</h3>

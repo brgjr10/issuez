@@ -34,19 +34,11 @@ if (!html.includes('cyclePriorityPatched=')) {
   console.log('Added cyclePriority function');
 }
 
-// 4. Add GitHub links
-let linkPatched = 0;
-html = html.replace(/\$\{p\(a\.title\)\}\<\/span\>/g, () => { linkPatched++; return '${p(a.title)}</span><a class="issue-gh-link" href="${a.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>'; });
-html = html.replace(/\$\{p\(s\.title\)\}\<\/span\>/g, () => { linkPatched++; return '${p(s.title)}</span><a class="issue-gh-link" href="${s.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>'; });
-html = html.replace(/\$\{p\(t\.title\)\}\<\/span\>/g, () => { linkPatched++; return '${p(t.title)}</span><a class="issue-gh-link" href="${t.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>'; });
-html = html.replace(/\$\{p\(o\.title\)\}\<\/div\>/g, () => { linkPatched++; return '${p(o.title)} <a href="${o.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size:0.75rem; opacity:0.7;">\u2197</a></div>'; });
-console.log('Patched ' + linkPatched + ' GitHub links');
-
-// 5. Add CSS for issue-gh-link by injecting the full styles.css
+// 4. Add CSS for issue-gh-link by injecting the full styles.css
 const cssPath = path.join(__dirname, 'src', 'styles.css');
 const cssContent = fs.readFileSync(cssPath, 'utf-8');
 
-if (!html.includes('.issue-gh-link{')) {
+if (!html.includes('data-theme="pride"')) {
   const cssStart = html.indexOf('<style id="theme-styles"></style>');
   if (cssStart >= 0) {
     html = html.replace('<style id="theme-styles"></style>', '<style id="theme-styles">\n' + cssContent + '\n</style>');
@@ -55,5 +47,5 @@ if (!html.includes('.issue-gh-link{')) {
 }
 
 fs.writeFileSync(distHtmlPath, html);
-fs.writeFileSync(rootHtmlPath, html);
-console.log('All patches applied to index.html');
+// Don't overwrite root index.html - keep it as clean entry point for builds
+console.log('Patched dist/index.html');
