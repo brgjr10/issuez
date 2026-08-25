@@ -7,9 +7,376 @@
   <meta name="description" content="Aggregate and manage all your GitHub issues across repositories in one place.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
   <style id="theme-styles"></style>
+  <script type="module" crossorigin>function getPriority(e){return e.labels.find(t=>t.name.startsWith("priority:"))?.name.replace("priority:","")||null}function getStatus(e){return e.labels.find(t=>t.name.startsWith("status:"))?.name.replace("status:","")||null}function getPrioritySortValue(e){const t=getPriority(e);return PRIORITY_ORDER[t]??99}(function(){const t=document.createElement("link").relList;if(t&&t.supports&&t.supports("modulepreload"))return;for(const n of document.querySelectorAll('link[rel="modulepreload"]'))o(n);new MutationObserver(n=>{for(const r of n)if(r.type==="childList")for(const i of r.addedNodes)i.tagName==="LINK"&&i.rel==="modulepreload"&&o(i)}).observe(document,{childList:!0,subtree:!0});function s(n){const r={};return n.integrity&&(r.integrity=n.integrity),n.referrerPolicy&&(r.referrerPolicy=n.referrerPolicy),n.crossOrigin==="use-credentials"?r.credentials="include":n.crossOrigin==="anonymous"?r.credentials="omit":r.credentials="same-origin",r}function o(n){if(n.ep)return;n.ep=!0;const r=s(n);fetch(n.href,r)}})();const L=(e,t=document)=>t.querySelector(e),u=(e,...t)=>e.reduce((s,o,n)=>s+o+(t[n]??""),""),p=e=>String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t]),Q=(e,t)=>{let s;return(...o)=>{clearTimeout(s),s=setTimeout(()=>e(...o),t)}},K=e=>new Date(e).toLocaleDateString(void 0,{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}),U=e=>{const t=Math.floor((Date.now()-new Date(e).getTime())/1e3);return t<60?t+"s ago":t<3600?Math.floor(t/60)+"m ago":t<86400?Math.floor(t/3600)+"h ago":Math.floor(t/86400)+"d ago"},Z={critical:0,high:1,medium:2,low:3},x={critical:"Critical",high:"High",medium:"Medium",low:"Low"},T={todo:"To Do","in-progress":"In Progress",done:"Done"},O="issuez_token",ee="issuez_layout",z="issuez_theme",q="https://api.github.com",te=100;let I=null,_={remaining:5e3,reset:0};function W(e){I=e}function se(){return I}function V(){return!!I}async function P(e,t={}){const s=await fetch(`${q}${e}`,{...t,headers:{Accept:"application/vnd.github+json",Authorization:I?`Bearer ${I}`:void 0,"X-GitHub-Api-Version":"2022-11-28",...t.headers}});if(_.remaining=parseInt(s.headers.get("X-RateLimit-Remaining")||"5000",10),_.reset=parseInt(s.headers.get("X-RateLimit-Reset")||"0",10)*1e3,s.status===401)throw new Error("Unauthorized");if(s.status===403&&_.remaining<=0)throw new Error("Rate limit exceeded. Try again after "+new Date(_.reset).toLocaleTimeString());if(!s.ok){const o=await s.text();throw new Error(o||s.statusText)}return s}async function A(e){const t=[];let s=`${q}${e}${e.includes("?")?"&":"?"}per_page=${te}&page=1`;for(;s;){if(_.remaining<=1){const l=Math.max(0,_.reset-Date.now());l>0&&await new Promise(a=>setTimeout(a,l))}const o=await fetch(s,{headers:{Accept:"application/vnd.github+json",Authorization:I?`Bearer ${I}`:void 0,"X-GitHub-Api-Version":"2022-11-28"}});if(_.remaining=parseInt(o.headers.get("X-RateLimit-Remaining")||"5000",10),_.reset=parseInt(o.headers.get("X-RateLimit-Reset")||"0",10)*1e3,!o.ok){const l=await o.text();throw new Error(l||o.statusText)}const n=await o.json();t.push(...n);const r=o.headers.get("Link");if(!r)break;const i=r.match(/<([^>]+)>;\s*rel="next"/);s=i?i[1]:null}return t}async function oe(){return(await P("/user")).json()}async function ne(){return A("/user/repos?sort=updated&per_page=100")}async function re(){return A("/user/orgs")}async function ie(e){return A(`/orgs/${e}/repos?sort=updated&per_page=100`)}async function N(e,t,s="open"){return(await A(`/repos/${e}/${t}/issues?state=${s}&per_page=100`)).filter(n=>!n.pull_request)}async function ae(e,t,s){return await A(`/repos/${e}/${t}/issues/${s}/comments`)}async function le(e,t,s,o){return(await P(`/repos/${e}/${t}/issues/${s}/comments`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({body:o})})).json()}async function ce(e,t,s,o){return(await P(`/repos/${e}/${t}/issues/${s}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(o)})).json()}async function R(e,t,s,o){return(await P(`/repos/${e}/${t}/issues/${s}/labels`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify([o])})).json()}async function M(e,t,s,o){await P(`/repos/${e}/${t}/issues/${s}/labels/${encodeURIComponent(o)}`,{method:"DELETE"})}function Y(e){var y,f;const t=e.labels.map(h=>({name:h.name,color:h.color})),s=((y=t.find(h=>h.name.startsWith("priority:")))==null?void 0:y.name.replace("priority:",""))||null,o=((f=t.find(h=>h.name.startsWith("status:")))==null?void 0:f.name.replace("status:",""))||null,r=(e.repository_url||"").split("/").filter(Boolean),i=r[r.length-1]||"unknown",a=`${r[r.length-2]||"unknown"}/${i}`;return{id:e.id,number:e.number,title:e.title,body:e.body||"",state:e.state,html_url:e.html_url,created_at:e.created_at,updated_at:e.updated_at,comments:e.comments,user:{login:e.user.login,avatar_url:e.user.avatar_url},repo:i,repo_full:a,labels:t,priority:s,status:o,pull_request:e.pull_request}}const S={user:null,issues:[],filteredIssues:[],repos:[],loading:!1,error:null,selectedIssue:null,searchQuery:"",filterRepo:"all",filterLabel:"all",filterState:"all",filterAssignee:"all",sortBy:"priority",sortDir:"asc",theme:"dark",layout:null,rateLimit:{remaining:5e3,reset:0},showSettings:!1,showWelcome:!1},j=new Set;function de(e){return j.add(e),()=>j.delete(e)}function c(){return S}function d(e){Object.assign(S,typeof e=="function"?e(S):e),j.forEach(t=>t(S))}function ue(){try{const e=localStorage.getItem(ee);e&&(S.layout=JSON.parse(e))}catch{}try{const e=localStorage.getItem(z);e&&(S.theme=e)}catch{}}function J(){try{localStorage.setItem(z,S.theme)}catch{}}let X=null;function g(e){var t;return((t=e.labels.find(s=>s.name.startsWith("priority:")))==null?void 0:t.name.replace("priority:",""))||null}function b(e){var t;return((t=e.labels.find(s=>s.name.startsWith("status:")))==null?void 0:t.name.replace("status:",""))||null}function D(e){const t=g(e);return Z[t]??99}function pe(){const e=localStorage.getItem(z)||"dark";d({theme:e}),E(e)}function E(e){document.documentElement.setAttribute("data-theme",e)}function m(e,t="info"){const s=document.createElement("div");s.className=`toast ${t}`,s.innerHTML=`<div class="toast-message">${p(e)}</div>
+    <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`,X.appendChild(s),setTimeout(()=>s.remove(),4e3)}function me(){var t,s;const e=c();return V()?u`
+    <header class="app-header">
+      <div class="app-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          <path d="M9 12h6M9 16h6"/>
+        </svg>
+        Issuez
+      </div>
+      <div class="header-actions">
+        <select id="theme-select" onchange="window._setTheme(this.value)">
+          <option value="dark" ${e.theme==="dark"?"selected":""}>Dark</option>
+          <option value="light" ${e.theme==="light"?"selected":""}>Light</option>
+          <option value="colorful" ${e.theme==="colorful"?"selected":""}>Colorful</option>
+          <option value="neon" ${e.theme==="neon"?"selected":""}>Neon</option>
+          <option value="pink" ${e.theme==="pink"?"selected":""}>Pink</option>
+          <option value="rainbow" ${e.theme==="rainbow"?"selected":""}>Rainbow</option>
+          <option value="sunset-glow" ${e.theme==="sunset-glow"?"selected":""}>Sunset Glow</option>
+          <option value="sky-gradient" ${e.theme==="sky-gradient"?"selected":""}>Sky Gradient</option>
+          <option value="berry-cobalt" ${e.theme==="berry-cobalt"?"selected":""}>Berry Cobalt</option>
+          <option value="ghost" ${e.theme==="ghost"?"selected":""}>Ghost</option>
+          <option value="solar" ${e.theme==="solar"?"selected":""}>Solar</option>
+          <option value="eclipse" ${e.theme==="eclipse"?"selected":""}>Eclipse</option>
+          <option value="pop" ${e.theme==="pop"?"selected":""}>Pop</option>
+          <option value="gold-signal" ${e.theme==="gold-signal"?"selected":""}>Gold Signal</option>
+          <option value="moss" ${e.theme==="moss"?"selected":""}>Moss</option>
+          <option value="zen" ${e.theme==="zen"?"selected":""}>Zen</option>
+          <option value="dusty" ${e.theme==="dusty"?"selected":""}>Dusty</option>
+          <option value="violet" ${e.theme==="violet"?"selected":""}>Violet</option>
+        </select>
+        <div class="user-info">
+          <img class="user-avatar" src="${((t=e.user)==null?void 0:t.avatar_url)||""}" alt="">
+          <span>${p(((s=e.user)==null?void 0:s.login)||"")}</span>
+        </div>
+        <button class="small" onclick="window._logout()">Logout</button>
+      </div>
+    </header>
+  `:""}function he(){return u`
+    <div class="auth-screen">
+      <div class="auth-card fade-in">
+        <h1>Issuez</h1>
+        <p>Cross-repo GitHub issue tracker. No server, no storage — just you and GitHub.</p>
+        <div style="text-align:left; margin-bottom:1rem;">
+          <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+            <strong>How to get a PAT:</strong>
+          </p>
+          <ol style="font-size:0.85rem; color:var(--text-secondary); padding-left:1.2rem; line-height:1.8;">
+            <li>Go to <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a></li>
+            <li>Click <strong>Generate new token (classic)</strong></li>
+            <li>Select scopes: <code style="background:var(--bg-tertiary); padding:0.1rem 0.3rem; border-radius:4px;">repo</code> and <code style="background:var(--bg-tertiary); padding:0.1rem 0.3rem; border-radius:4px;">read:org</code></li>
+            <li>Copy the token and paste it below</li>
+          </ol>
+        </div>
+        <div class="auth-methods">
+          <input type="password" id="pat-input" placeholder="ghp_..." style="margin-bottom:0.5rem;">
+          <button class="primary" style="width:100%;" onclick="window._patLogin()">Connect with PAT</button>
+        </div>
+        <p style="margin-top:1rem; font-size:0.8rem; color:var(--text-muted);">
+          Your token stays in memory only. It is never stored or sent anywhere except GitHub.
+        </p>
+      </div>
+    </div>
+  `}function fe(){const e=c(),t=[...new Set(e.filteredIssues.map(s=>s.repo))];return u`
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="search-box">
+          <span class="search-icon">&#128269;</span>
+          <input type="text" id="search-input" placeholder="Search issues..." value="${p(e.searchQuery)}" oninput="window._onSearch(this.value)">
+        </div>
+        <div class="filter-group">
+          <label>Repo</label>
+          <select id="filter-repo" onchange="window._setFilter('repo', this.value)">
+            <option value="all">All</option>
+            ${t.map(s=>u`<option value="${p(s)}" ${e.filterRepo===s?"selected":""}>${p(s)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>State</label>
+          <select id="filter-state" onchange="window._setFilter('state', this.value)">
+            <option value="all" ${e.filterState==="all"?"selected":""}>All</option>
+            <option value="open" ${e.filterState==="open"?"selected":""}>Open</option>
+            <option value="closed" ${e.filterState==="closed"?"selected":""}>Closed</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Assignee</label>
+          <select id="filter-assignee" onchange="window._setFilter('assignee', this.value)">
+            <option value="all" ${e.filterAssignee==="all"?"selected":""}>All</option>
+            <option value="me" ${e.filterAssignee==="me"?"selected":""}>Assigned to me</option>
+          </select>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <button onclick="window._refresh()" title="Refresh">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Refresh
+        </button>
+        <button onclick="window._openSettings()" title="Settings">&#9881; Settings</button>
+      </div>
+    </div>
+  `}function ge(){const e=c(),t=e.filteredIssues.filter(n=>n.state==="open").length,s=e.filteredIssues.filter(n=>n.state==="closed").length,o=e.filteredIssues.filter(n=>g(n)==="critical").length;return u`
+    <div class="stats-bar">
+      <div class="stat-card"><div class="stat-value">${e.filteredIssues.length}</div><div class="stat-label">Total</div></div>
+      <div class="stat-card"><div class="stat-value">${t}</div><div class="stat-label">Open</div></div>
+      <div class="stat-card"><div class="stat-value">${s}</div><div class="stat-label">Closed</div></div>
+      <div class="stat-card"><div class="stat-value">${o}</div><div class="stat-label">Critical</div></div>
+    </div>
+  `}function ve(){const e=c();if(e.loading&&e.filteredIssues.length===0)return u`
+      <div class="issues-table-wrapper">
+        <table class="issues-table">
+          <thead><tr><th>Issue</th><th>Priority</th><th>Status</th><th>Labels</th><th>Updated</th><th>Actions</th></tr></thead>
+          <tbody>${Array(8).fill(0).map(()=>u`<tr>${Array(6).fill('<td><div class="skeleton" style="width:90%;"></div></td>').join("")}</tr>`).join("")}</tbody>
+        </table>
+      </div>
+    `;if(!e.loading&&e.filteredIssues.length===0)return u`
+      <div class="issues-table-wrapper empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <h3>No issues found</h3>
+        <p>Try adjusting your search or filters.</p>
+      </div>
+    `;const t=[...e.filteredIssues].sort((n,r)=>{let i=0;switch(e.sortBy){case"priority":i=D(n)-D(r);break;case"created":i=new Date(r.created_at)-new Date(n.created_at);break;case"updated":i=new Date(r.updated_at)-new Date(n.updated_at);break;case"repo":i=n.repo.localeCompare(r.repo);break;case"comments":i=r.comments-n.comments;break;default:i=0}return e.sortDir==="asc"?-i:i}),s={};for(const n of t)s[n.repo]||(s[n.repo]=[]),s[n.repo].push(n);const o=n=>e.sortBy!==n?'<span class="sort-arrow">&#8597;</span>':e.sortDir==="asc"?'<span class="sort-arrow">&#8593;</span>':'<span class="sort-arrow">&#8595;</span>';return u`
+    <div class="issues-table-wrapper">
+      <table class="issues-table">
+        <thead>
+          <tr>
+            <th onclick="window._setSort('repo')">Repo ${o("repo")}</th>
+            <th onclick="window._setSort('priority')">Priority ${o("priority")}</th>
+            <th>Issue</th>
+            <th>Status</th>
+            <th>Labels</th>
+            <th onclick="window._setSort('updated')">Updated ${o("updated")}</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${Object.entries(s).map(([n,r])=>u`
+            <tr class="repo-group-header"><td colspan="7">${p(n)} <span style="opacity:0.6; font-weight:400;">(${r.length})</span></td></tr>
+            ${r.map(i=>u`
+              <tr>
+                <td><span style="font-weight:500; font-size:0.8rem;">${p(i.repo)}</span></td>
+                <td>
+                   <span class="priority-badge priority-${g(i)||"none"}" onclick="window._cyclePriority('${i.repo_full}', ${i.number})" title="Click to change priority">${x[g(i)]||"None"}</span>
+                </td>
+                <td>
+                  <span class="issue-title" onclick="window._openIssue('${i.repo_full}', ${i.number})">${p(i.title)}</span>
+                   <a class="issue-gh-link" href="${i.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>
+                  <span class="issue-number">#${i.number}</span>
+                </td>
+                <td>
+                   <span class="status-badge status-${b(i)||"todo"}" onclick="window._cycleStatus('${i.repo_full}', ${i.number})" title="Click to change status">
+                     ${T[b(i)]||"To Do"}
+                   </span>
+                </td>
+                 <td>
+                   <div class="label-list">
+                     ${i.labels.filter(l=>!l.name.startsWith("priority:")&&!l.name.startsWith("status:")).slice(0,3).map(l=>u`<span class="label-chip" style="border-color:#${l.color}40; color:#${l.color};">${p(l.name)}</span>`).join("")}
+                     ${i.labels.filter(l=>!l.name.startsWith("priority:")&&!l.name.startsWith("status:")).length>3?u`<span class="label-chip">+${i.labels.filter(l=>!l.name.startsWith("priority:")&&!l.name.startsWith("status:")).length-3}</span>`:""}
+                   </div>
+                 </td>
+                <td style="white-space:nowrap; font-size:0.8rem; color:var(--text-secondary);">${U(i.updated_at)}</td>
+                <td>
+                  <div class="issue-actions">
+                    <button class="small" onclick="window._openIssue('${i.repo_full}', ${i.number})">View</button>
+                    <button class="small" onclick="window._toggleIssueState('${i.repo_full}', ${i.number})">
+                      ${i.state==="open"?"Close":"Reopen"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `).join("")}
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `}function ye(){const e=c();if(e.loading&&e.filteredIssues.length===0)return u`
+      <div class="issues-cards">
+        ${Array(4).fill(0).map(()=>u`
+          <div class="issue-card">
+            <div class="skeleton" style="width:70%; height:20px;"></div>
+            <div class="skeleton" style="width:40%; height:14px; margin-top:0.5rem;"></div>
+          </div>
+        `).join("")}
+      </div>
+    `;if(!e.loading&&e.filteredIssues.length===0)return"";const t=[...e.filteredIssues].sort((s,o)=>{let n=0;switch(e.sortBy){case"priority":n=D(s)-D(o);break;case"created":n=new Date(o.created_at)-new Date(s.created_at);break;case"updated":n=new Date(o.updated_at)-new Date(s.updated_at);break;case"repo":n=s.repo.localeCompare(o.repo);break;case"comments":n=o.comments-s.comments;break;default:n=0}return e.sortDir==="asc"?-n:n});return u`
+    <div class="issues-cards">
+      ${t.map(s=>u`
+        <div class="issue-card" onclick="window._openIssue('${s.repo_full}', ${s.number})">
+          <div class="issue-card-header">
+            <div>
+              <div class="issue-card-title">${p(s.title)} <a href="${s.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size:0.75rem; opacity:0.7;">↗</a></div>
+              <div class="issue-card-meta">
+                <span class="issue-card-repo">${p(s.repo)}</span>
+                <span>&#183;</span>
+                <span>#${s.number}</span>
+                <span>&#183;</span>
+                <span>${U(s.updated_at)}</span>
+              </div>
+            </div>
+            <span class="priority-badge priority-${g(s)||"none"}" onclick="event.stopPropagation(); window._cyclePriority('${s.repo_full}', ${s.number})" title="Click to change priority">${x[g(s)]||"None"}</span>
+          </div>
+          <div class="issue-card-footer">
+            <span class="status-badge status-${b(s)||"todo"}" onclick="event.stopPropagation(); window._cycleStatus('${s.repo_full}', ${s.number})">
+              ${T[b(s)]||"To Do"}
+            </span>
+            <div class="label-list">
+              ${s.labels.filter(o=>!o.name.startsWith("priority:")&&!o.name.startsWith("status:")).slice(0,4).map(o=>u`<span class="label-chip" style="border-color:#${o.color}40; color:#${o.color};">${p(o.name)}</span>`).join("")}
+            </div>
+            <button class="small" onclick="event.stopPropagation(); window._toggleIssueState('${s.repo_full}', ${s.number})" style="margin-left:auto;">
+              ${s.state==="open"?"Close":"Reopen"}
+            </button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `}function we(){const e=c();if(!e.selectedIssue)return"";const t=e.selectedIssue;return u`
+    <div class="modal-overlay" onclick="if(event.target===this)window._closeIssue()">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h2>${p(t.title)}</h2>
+            <div class="issue-card-meta" style="margin-top:0.5rem;">
+              <span style="font-weight:500;">${p(t.repo_full)}</span>
+              <span>&#183;</span>
+              <span>#${t.number}</span>
+              <span>&#183;</span>
+            <span class="priority-badge priority-${g(t)||"none"}" onclick="event.stopPropagation(); window._cyclePriority('${t.repo_full}', ${t.number})" title="Click to change priority">${x[g(t)]||"None"}</span>
+              <span>&#183;</span>
+              <span class="status-badge status-${b(t)||"todo"}" onclick="window._cycleStatusFromModal()">${T[b(t)]||"To Do"}</span>
+            </div>
+          </div>
+          <button class="modal-close" onclick="window._closeIssue()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-section">
+            <h3>Description</h3>
+            <div style="white-space:pre-wrap; line-height:1.6; font-size:0.9rem;">${p(t.body)||'<em style="color:var(--text-muted);">No description</em>'}</div>
+          </div>
+          <div class="modal-section">
+            <h3>Actions</h3>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+              <button onclick="window._toggleIssueStateFromModal()">${t.state==="open"?"Close Issue":"Reopen Issue"}</button>
+              <select id="modal-priority" onchange="window._setPriorityFromModal(this.value)" style="width:auto; min-width:120px;">
+                <option value="">Set Priority...</option>
+                <option value="critical" ${g(t)==="critical"?"selected":""}>Critical</option>
+                <option value="high" ${g(t)==="high"?"selected":""}>High</option>
+                <option value="medium" ${g(t)==="medium"?"selected":""}>Medium</option>
+                <option value="low" ${g(t)==="low"?"selected":""}>Low</option>
+              </select>
+              <select id="modal-status" onchange="window._setStatusFromModal(this.value)" style="width:auto; min-width:140px;">
+                <option value="">Set Status...</option>
+                <option value="todo" ${b(t)==="todo"?"selected":""}>To Do</option>
+                <option value="in-progress" ${b(t)==="in-progress"?"selected":""}>In Progress</option>
+                <option value="done" ${b(t)==="done"?"selected":""}>Done</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-section">
+            <h3>Comments (${t.comments_count||0})</h3>
+            <div id="comments-list">
+              <div class="loading-spinner"></div>
+            </div>
+            <div class="comment-form">
+              <textarea id="comment-input" placeholder="Add a comment..."></textarea>
+              <button class="primary" onclick="window._submitComment()">Post</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `}function be(){const e=c();return u`
+    <div class="modal-overlay" onclick="if(event.target===this)window._closeSettings()">
+      <div class="modal" style="max-width:640px;">
+        <div class="modal-header">
+          <h2>Settings</h2>
+          <button class="modal-close" onclick="window._closeSettings()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="settings-grid">
+            <div class="settings-card">
+              <h3>&#127912; Theme</h3>
+              <select id="settings-theme" onchange="window._setTheme(this.value)" style="margin-bottom:0.5rem;">
+                 <option value="dark" ${e.theme==="dark"?"selected":""}>Dark</option>
+                 <option value="light" ${e.theme==="light"?"selected":""}>Light</option>
+                 <option value="colorful" ${e.theme==="colorful"?"selected":""}>Colorful</option>
+                 <option value="neon" ${e.theme==="neon"?"selected":""}>Neon</option>
+                 <option value="pink" ${e.theme==="pink"?"selected":""}>Pink</option>
+                 <option value="rainbow" ${e.theme==="rainbow"?"selected":""}>Rainbow</option>
+                 <option value="sunset-glow" ${e.theme==="sunset-glow"?"selected":""}>Sunset Glow</option>
+                 <option value="sky-gradient" ${e.theme==="sky-gradient"?"selected":""}>Sky Gradient</option>
+                 <option value="berry-cobalt" ${e.theme==="berry-cobalt"?"selected":""}>Berry Cobalt</option>
+                 <option value="ghost" ${e.theme==="ghost"?"selected":""}>Ghost</option>
+                 <option value="solar" ${e.theme==="solar"?"selected":""}>Solar</option>
+                 <option value="eclipse" ${e.theme==="eclipse"?"selected":""}>Eclipse</option>
+                 <option value="pop" ${e.theme==="pop"?"selected":""}>Pop</option>
+                 <option value="gold-signal" ${e.theme==="gold-signal"?"selected":""}>Gold Signal</option>
+                 <option value="moss" ${e.theme==="moss"?"selected":""}>Moss</option>
+                 <option value="zen" ${e.theme==="zen"?"selected":""}>Zen</option>
+                 <option value="dusty" ${e.theme==="dusty"?"selected":""}>Dusty</option>
+                 <option value="violet" ${e.theme==="violet"?"selected":""}>Violet</option>
+               </select>
+            </div>
+            <div class="settings-card">
+              <h3>&#128190; Export Layout</h3>
+              <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">Download your layout config as JSON.</p>
+              <button onclick="window._exportLayout()">Export Layout</button>
+            </div>
+            <div class="settings-card">
+              <h3>&#128194; Import Layout</h3>
+              <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">Upload a previously exported layout file.</p>
+              <input type="file" id="import-file" accept=".json" onchange="window._importLayout(this)">
+            </div>
+            <div class="settings-card">
+              <h3>&#128275; Security</h3>
+              <p style="font-size:0.85rem; color:var(--text-secondary);">No data is stored on any server. Your token lives in memory only and is discarded on logout.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `}function $e(){return u`
+    <div class="modal-overlay" onclick="if(event.target===this)window._closeWelcome()">
+      <div class="modal" style="max-width:520px; text-align:center;">
+        <div class="modal-header" style="justify-content:center; border-bottom:none;">
+          <h2 style="font-size:1.5rem;">Welcome to Issuez</h2>
+        </div>
+        <div class="modal-body">
+          <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.95rem;">
+            Your cross-repo GitHub issue dashboard is ready.
+            Browse, search, and manage issues across all your repositories in one place.
+          </p>
+          <button class="primary" onclick="window._closeWelcome()" style="min-width:160px;">Get Started</button>
+        </div>
+      </div>
+    </div>
+  `}function _e(){const e=c();return e.error?u`
+    <div class="error-state" style="margin:1rem 0;">
+      <span>&#9888;</span>
+      <div style="flex:1;">
+        <strong>Error</strong>
+        <div style="font-size:0.85rem; color:var(--text-secondary);">${p(e.error)}</div>
+      </div>
+      <button onclick="window._dismissError()">Dismiss</button>
+    </div>
+  `:""}function v(){const e=c(),t=L("#app");if(t){if(!V()){t.innerHTML=he();return}t.innerHTML=u`
+    ${me()}
+    <main class="app-main">
+      ${_e()}
+      ${ge()}
+      ${fe()}
+      ${ve()}
+      ${ye()}
+    </main>
+    ${we()}
+    ${e.showSettings?be():""}
+    ${e.showWelcome?$e():""}
+    <div class="toast-container" id="toast-container"></div>
+  `,X=L("#toast-container")}}function C(){const e=c();let t=[...e.issues];if(e.searchQuery){const s=e.searchQuery.toLowerCase();t=t.filter(o=>o.title.toLowerCase().includes(s)||o.body.toLowerCase().includes(s))}e.filterRepo!=="all"&&(t=t.filter(s=>s.repo===e.filterRepo)),e.filterState!=="all"&&(t=t.filter(s=>s.state===e.filterState)),e.filterAssignee==="me"&&(t=t.filter(s=>{var o;return(o=s.assignees)==null?void 0:o.some(n=>{var r;return n.login===((r=e.user)==null?void 0:r.login)})})),d({filteredIssues:t})}async function B(){d({loading:!0,error:null});try{const e=await oe(),[t,s]=await Promise.all([ne(),re().catch(()=>[])]),o=await Promise.all(s.map(a=>ie(a.login).catch(()=>[]))),n=[...t,...o.flat()],r=Array.from(new Map(n.map(a=>[a.full_name,a])).values());d({repos:r,user:e});const i=[];for(const a of r)try{const[y,f]=await Promise.all([N(a.owner.login,a.name,"open").catch(()=>[]),N(a.owner.login,a.name,"closed").catch(()=>[])]);i.push(...y,...f)}catch(y){console.warn("Failed to load issues for",a.full_name,y)}const l=i.map(Y);d({issues:l}),C(),m(`Loaded ${l.length} issues`,"success")}catch(e){d({error:e.message}),m(e.message,"error")}finally{d({loading:!1})}}async function Se(e){W(e),sessionStorage.setItem(O,e),v(),await B(),d({showWelcome:!0})}function Ie(){W(null),sessionStorage.removeItem(O),d({user:null,issues:[],filteredIssues:[],selectedIssue:null,error:null,showWelcome:!1}),v()}async function ke(e,t){try{const s=await fetch(`https://api.github.com/repos/${e}/issues/${t}`,{headers:{Accept:"application/vnd.github+json",Authorization:`Bearer ${se()}`,"X-GitHub-Api-Version":"2022-11-28"}}).then(n=>n.json()),o=Y(s);o.comments_count=s.comments,d({selectedIssue:o}),v(),k(e,t)}catch(s){m(s.message,"error")}}async function k(e,t){const s=L("#comments-list");if(s)try{const o=await ae(e.split("/")[0],e.split("/")[1],t);if(o.length===0){s.innerHTML='<p style="color:var(--text-muted); font-size:0.85rem;">No comments yet.</p>';return}s.innerHTML=o.map(n=>u`
+      <div class="comment">
+        <div class="comment-header">
+          <img src="${n.user.avatar_url}" style="width:20px; height:20px; border-radius:50%;" alt="">
+          <span class="comment-author">${p(n.user.login)}</span>
+          <span class="comment-date">${K(n.created_at)}</span>
+        </div>
+        <div class="comment-body">${p(n.body)}</div>
+      </div>
+    `).join("")}catch(o){s.innerHTML=`<div class="error-state">${p(o.message)}</div>`}}async function Le(){var o;const e=L("#comment-input"),t=(o=e==null?void 0:e.value)==null?void 0:o.trim();if(!t||!c().selectedIssue)return;const s=c().selectedIssue;try{await le(s.repo_full.split("/")[0],s.repo_full.split("/")[1],s.number,t),e.value="",m("Comment posted","success"),k(s.repo_full,s.number)}catch(n){m(n.message,"error")}}async function H(e,t){const s=c().issues.find(o=>o.repo_full===e&&o.number===t);if(s)try{const o=s.state==="open"?"closed":"open";await ce(e.split("/")[0],e.split("/")[1],t,{state:o}),m(`Issue ${o}`,"success");const n={...s,state:o};d({issues:c().issues.map(r=>r.repo_full===e&&r.number===t?n:r),filteredIssues:c().filteredIssues.map(r=>r.repo_full===e&&r.number===t?n:r),selectedIssue:n}),v(),setTimeout(()=>k(e,t),50)}catch(o){m(o.message,"error")}}async function G(e,t){const s=["todo","in-progress","done"],o=c().issues.find(f=>f.repo_full===e&&f.number===t);if(!o)return;const n=b(o)||"todo",r=s[(s.indexOf(n)+1)%s.length],i=`status:${r}`,l=e.split("/")[0],a=e.split("/")[1],y=[];n!=="todo"&&y.push(M(l,a,t,`status:${n}`).catch(()=>{})),y.push(R(l,a,t,i));try{await Promise.all(y),m(`Status set to ${T[r]}`,"success");const f=o.labels.filter(w=>!w.name.startsWith("status:")).concat({name:i,color:"a2eeef"}),h={...o,labels:f};d({issues:c().issues.map(w=>w.repo_full===e&&w.number===t?h:w),filteredIssues:c().filteredIssues.map(w=>w.repo_full===e&&w.number===t?h:w),selectedIssue:h}),v(),setTimeout(()=>k(e,t),50)}catch(f){m(f.message,"error")}}async function xe(e,t){const s=["critical","high","medium","low"],o=c().issues.find(h=>h.repo_full===e&&h.number===t);if(!o)return;const n=g(o),r=s.indexOf(n||""),i=r>=0?s[(r+1)%s.length]:"critical",l=`priority:${i}`,a=e.split("/")[0],y=e.split("/")[1],f=[];n&&f.push(M(a,y,t,`priority:${n}`).catch(()=>{})),f.push(R(a,y,t,l));try{await Promise.all(f),m(`Priority set to ${x[i]}`,"success");const h=o.labels.filter($=>!$.name.startsWith("priority:")).concat({name:l,color:"b60205"}),w={...o,labels:h};d({issues:c().issues.map($=>$.repo_full===e&&$.number===t?w:$),filteredIssues:c().filteredIssues.map($=>$.repo_full===e&&$.number===t?w:$),selectedIssue:w}),v(),setTimeout(()=>k(e,t),50)}catch(h){m(h.message,"error")}}async function Te(e){const t=c().selectedIssue;if(!t||!e)return;const s=t.repo_full.split("/")[0],o=t.repo_full.split("/")[1],n=[],r=g(t);r&&n.push(M(s,o,t.number,`priority:${r}`).catch(()=>{})),n.push(R(s,o,t.number,`priority:${e}`));try{await Promise.all(n),m(`Priority set to ${x[e]}`,"success");const i=t.labels.filter(a=>!a.name.startsWith("priority:")).concat({name:`priority:${e}`,color:"b60205"}),l={...t,labels:i};d({issues:c().issues.map(a=>a.repo_full===t.repo_full&&a.number===t.number?l:a),filteredIssues:c().filteredIssues.map(a=>a.repo_full===t.repo_full&&a.number===t.number?l:a),selectedIssue:l}),v(),setTimeout(()=>k(t.repo_full,t.number),50)}catch(i){m(i.message,"error")}}async function Pe(e){const t=c().selectedIssue;if(!t||!e)return;const s=t.repo_full.split("/")[0],o=t.repo_full.split("/")[1],n=[],r=b(t);r&&r!=="todo"&&n.push(M(s,o,t.number,`status:${r}`).catch(()=>{})),n.push(R(s,o,t.number,`status:${e}`));try{await Promise.all(n),m(`Status set to ${T[e]}`,"success");const i=t.labels.filter(a=>!a.name.startsWith("status:")).concat({name:`status:${e}`,color:"a2eeef"}),l={...t,labels:i};d({issues:c().issues.map(a=>a.repo_full===t.repo_full&&a.number===t.number?l:a),filteredIssues:c().filteredIssues.map(a=>a.repo_full===t.repo_full&&a.number===t.number?l:a),selectedIssue:l}),v(),setTimeout(()=>k(t.repo_full,t.number),50)}catch(i){m(i.message,"error")}}function Ae(){d({showSettings:!0})}function Ce(){d({showSettings:!1})}function De(){const e=c(),t={theme:e.theme,sortBy:e.sortBy,sortDir:e.sortDir,columns:["repo","priority","issue","status","labels","updated","actions"],exportedAt:new Date().toISOString()},s=new Blob([JSON.stringify(t,null,2)],{type:"application/json"}),o=URL.createObjectURL(s),n=document.createElement("a");n.href=o,n.download="issuez-layout.json",n.click(),URL.revokeObjectURL(o),m("Layout exported","success")}function Re(e){var o;const t=(o=e.files)==null?void 0:o[0];if(!t)return;const s=new FileReader;s.onload=n=>{try{const r=JSON.parse(n.target.result);r.theme&&(d({theme:r.theme}),E(r.theme),J()),r.sortBy&&d({sortBy:r.sortBy,sortDir:r.sortDir||"asc"}),m("Layout imported","success")}catch{m("Invalid layout file","error")}},s.readAsText(t)}function Me(){window._setTheme=e=>{d({theme:e}),E(e),J()},window._logout=Ie,window._patLogin=()=>{var t,s;const e=(s=(t=L("#pat-input"))==null?void 0:t.value)==null?void 0:s.trim();if(!e)return m("Enter a PAT","warning");Se(e)},window._onSearch=Q(e=>{d({searchQuery:e}),C()},200),window._setFilter=(e,t)=>{e==="repo"&&d({filterRepo:t}),e==="state"&&d({filterState:t}),e==="assignee"&&d({filterAssignee:t}),C()},window._setSort=e=>{const t=c();t.sortBy===e?d({sortDir:t.sortDir==="asc"?"desc":"asc"}):d({sortBy:e,sortDir:"asc"}),C(),v()},window._refresh=async()=>{await B()},window._openIssue=ke,window._closeIssue=()=>{d({selectedIssue:null}),v()},window._openSettings=Ae,window._closeSettings=Ce,window._closeWelcome=()=>{d({showWelcome:!1}),v()},window._toggleIssueState=H,window._toggleIssueStateFromModal=()=>{const e=c().selectedIssue;e&&H(e.repo_full,e.number)},window._cycleStatus=G,window._cyclePriority=xe,window._cycleStatusFromModal=()=>{const e=c().selectedIssue;e&&G(e.repo_full,e.number)},window._setPriorityFromModal=Te,window._setStatusFromModal=Pe,window._submitComment=Le,window._exportLayout=De,window._importLayout=Re,window._dismissError=()=>d({error:null})}async function F(){pe(),ue(),E(c().theme),Me(),de(v);const e=sessionStorage.getItem(O);e?(W(e),v(),await B()):v()}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",F):F();const cyclePriorityPatched=async(e,r)=>{const t=["todo","in-progress","done"],o=c().issues.find(h=>h.repo_full===e&&h.number===r);if(!o)return;const s=getPriority(o)||"none",n=["critical","high","medium","low"],i=n.indexOf(s),a=i>=0?n[(i+1)%n.length]:"critical",l="priority:"+a,g=e.split("/")[0],d=e.split("/")[1],w=[];i>=0&&w.push(ie(g,d,r,"priority:"+s).catch(()=>{})),w.push(re(g,d,r,l));try{await Promise.all(w),f("Priority set to "+P[a],"success");const u={...o,labels:o.labels.filter(t=>!t.name.startsWith("priority:")).concat({name:l,color:"b60205"})};a({issues:c().issues.map(t=>t.repo_full===o.repo_full&&t.number===o.number?u:t),filteredIssues:c().filteredIssues.map(t=>t.repo_full===o.repo_full&&t.number===o.number?u:t),selectedIssue:u}),g(),setTimeout(()=>O(e,r),200)}catch(h){f(h.message,"error")}};window._cyclePriority=cyclePriorityPatched;</script>
+  <style rel="stylesheet" crossorigin>:root{--bg-primary: #0d1117;--bg-secondary: #161b22;--bg-tertiary: #21262d;--bg-hover: #30363d;--border-color: #30363d;--text-primary: #c9d1d9;--text-secondary: #8b949e;--text-muted: #6e7681;--accent: #58a6ff;--accent-hover: #79c0ff;--success: #3fb950;--warning: #d29922;--danger: #f85149;--info: #58a6ff;--shadow: 0 4px 12px rgba(0,0,0,.4);--radius: 8px;--font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;--priority-critical: #f85149;--priority-high: #d29922;--priority-medium: #58a6ff;--priority-low: #3fb950;--priority-none: #6e7681;--status-todo: #6e7681;--status-in-progress: #d29922;--status-done: #3fb950;--glass-bg: rgba(22, 27, 34, .85);--glass-border: rgba(48, 54, 61, .5)}[data-theme=light]{--bg-primary: #ffffff;--bg-secondary: #f6f8fa;--bg-tertiary: #eaeef2;--bg-hover: #e1e4e8;--border-color: #d0d7de;--text-primary: #1f2328;--text-secondary: #656d76;--text-muted: #8c959f;--accent: #0969da;--accent-hover: #0550ae;--success: #1a7f37;--warning: #9a6700;--danger: #cf222e;--info: #0969da;--shadow: 0 4px 12px rgba(0,0,0,.1);--glass-bg: rgba(255, 255, 255, .9);--glass-border: rgba(208, 215, 222, .5)}[data-theme=colorful]{--bg-primary: #1a1025;--bg-secondary: #251a35;--bg-tertiary: #302545;--bg-hover: #3d3155;--border-color: #4a3d65;--text-primary: #e8e0f0;--text-secondary: #b8a9c9;--text-muted: #8b7da0;--accent: #c084fc;--accent-hover: #d8b4fe;--success: #4ade80;--warning: #fbbf24;--danger: #fb7185;--info: #60a5fa;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(37, 26, 53, .9);--glass-border: rgba(74, 61, 101, .5);--priority-critical: #fb7185;--priority-high: #fbbf24;--priority-medium: #60a5fa;--priority-low: #4ade80}[data-theme=neon]{--bg-primary: #0a0a0a;--bg-secondary: #111111;--bg-tertiary: #1a1a1a;--bg-hover: #222222;--border-color: #00ffaa33;--text-primary: #e0ffe0;--text-secondary: #a0d0a0;--text-muted: #607060;--accent: #00ffaa;--accent-hover: #33ffbb;--success: #00ff88;--warning: #ffaa00;--danger: #ff3366;--info: #00ccff;--shadow: 0 0 20px rgba(0,255,170,.15);--glass-bg: rgba(17, 17, 17, .95);--glass-border: rgba(0, 255, 170, .3);--priority-critical: #ff3366;--priority-high: #ffaa00;--priority-medium: #00ccff;--priority-low: #00ff88}[data-theme=pink]{--bg-primary: #1a0f14;--bg-secondary: #251520;--bg-tertiary: #301a2a;--bg-hover: #3d2035;--border-color: #4a2840;--text-primary: #fce4ec;--text-secondary: #e1bee7;--text-muted: #ce93d8;--accent: #f06292;--accent-hover: #f48fb1;--success: #81c784;--warning: #ffb74d;--danger: #e57373;--info: #90caf9;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(37, 21, 32, .9);--glass-border: rgba(74, 40, 64, .5);--priority-critical: #e57373;--priority-high: #ffb74d;--priority-medium: #90caf9;--priority-low: #81c784}[data-theme=rainbow]{--bg-primary: #0f0015;--bg-secondary: #1a0025;--bg-tertiary: #250035;--bg-hover: #300045;--border-color: #3d0055;--text-primary: #f5e0ff;--text-secondary: #c0a0e0;--text-muted: #9070b0;--accent: #FF0000;--accent-hover: #FF3333;--success: #008026;--warning: #FFED00;--danger: #E40303;--info: #004CFF;--shadow: 0 4px 12px rgba(0,0,0,.4);--glass-bg: rgba(26, 0, 37, .9);--glass-border: rgba(61, 0, 85, .5);--priority-critical: #E40303;--priority-high: #FF8C00;--priority-medium: #FFED00;--priority-low: #008026}[data-theme=sunset-glow]{--bg-primary: #1a0f0a;--bg-secondary: #251810;--bg-tertiary: #30201a;--bg-hover: #3d2820;--border-color: #4a3028;--text-primary: #f5e8e0;--text-secondary: #c0a090;--text-muted: #907060;--accent: #FF6B35;--accent-hover: #FF8555;--success: #D52D00;--warning: #FF9A56;--danger: #A30262;--info: #EF7627;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(37, 24, 16, .9);--glass-border: rgba(74, 48, 40, .5);--priority-critical: #D52D00;--priority-high: #FF6B35;--priority-medium: #FF9A56;--priority-low: #EF7627}[data-theme=sky-gradient]{--bg-primary: #0a1018;--bg-secondary: #101825;--bg-tertiary: #182030;--bg-hover: #202838;--border-color: #283040;--text-primary: #e0f0ff;--text-secondary: #a0c0e0;--text-muted: #7080a0;--accent: #F5A9B8;--accent-hover: #F8C0CB;--success: #5BCEFA;--warning: #FFFFFF;--danger: #F5A9B8;--info: #5BCEFA;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(16, 24, 37, .9);--glass-border: rgba(40, 48, 64, .5);--priority-critical: #F5A9B8;--priority-high: #5BCEFA;--priority-medium: #FFFFFF;--priority-low: #5BCEFA}[data-theme=berry-cobalt]{--bg-primary: #0f0818;--bg-secondary: #150f25;--bg-tertiary: #1c1430;--bg-hover: #241a3d;--border-color: #2e2050;--text-primary: #f0e5ff;--text-secondary: #c0a0e0;--text-muted: #9070b0;--accent: #D60270;--accent-hover: #F02288;--success: #9B4F96;--warning: #FF6B9D;--danger: #0038A8;--info: #5B4FCD;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(21, 15, 37, .9);--glass-border: rgba(46, 32, 80, .5);--priority-critical: #D60270;--priority-high: #9B4F96;--priority-medium: #5B4FCD;--priority-low: #0038A8}[data-theme=ghost]{--bg-primary: #0f0f12;--bg-secondary: #16161a;--bg-tertiary: #1e1e24;--bg-hover: #28282f;--border-color: #32323a;--text-primary: #e8e8f0;--text-secondary: #a0a0b0;--text-muted: #707080;--accent: #A3A3A3;--accent-hover: #BDBDBD;--success: #A3A3A3;--warning: #FFFFFF;--danger: #800080;--info: #A3A3A3;--shadow: 0 4px 12px rgba(0,0,0,.4);--glass-bg: rgba(15, 15, 18, .9);--glass-border: rgba(50, 50, 58, .5);--priority-critical: #800080;--priority-high: #A3A3A3;--priority-medium: #FFFFFF;--priority-low: #A3A3A3}[data-theme=solar]{--bg-primary: #140010;--bg-secondary: #1f0018;--bg-tertiary: #2a0020;--bg-hover: #350028;--border-color: #450038;--text-primary: #ffe8f5;--text-secondary: #d0a0c0;--text-muted: #a07090;--accent: #FF218C;--accent-hover: #FF44A8;--success: #FFD800;--warning: #21B1FF;--danger: #FF218C;--info: #21B1FF;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(31, 0, 24, .9);--glass-border: rgba(69, 0, 56, .5);--priority-critical: #FF218C;--priority-high: #FFD800;--priority-medium: #21B1FF;--priority-low: #FF218C}[data-theme=eclipse]{--bg-primary: #0f0812;--bg-secondary: #150f18;--bg-tertiary: #1c1420;--bg-hover: #241a28;--border-color: #2e2035;--text-primary: #f5e8f5;--text-secondary: #c0a0c0;--text-muted: #907090;--accent: #FF76A4;--accent-hover: #FF92B8;--success: #C011D7;--warning: #FFFFFF;--danger: #FF76A4;--info: #2F3CBE;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(21, 15, 24, .9);--glass-border: rgba(46, 32, 53, .5);--priority-critical: #FF76A4;--priority-high: #C011D7;--priority-medium: #FFFFFF;--priority-low: #2F3CBE}[data-theme=pop]{--bg-primary: #0a0810;--bg-secondary: #100f18;--bg-tertiary: #181520;--bg-hover: #201c28;--border-color: #282435;--text-primary: #f5e5ff;--text-secondary: #c5a5e0;--text-muted: #9575b0;--accent: #F714BA;--accent-hover: #F940CC;--success: #01D66A;--warning: #1594F6;--danger: #F714BA;--info: #1594F6;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(16, 15, 24, .9);--glass-border: rgba(40, 36, 53, .5);--priority-critical: #F714BA;--priority-high: #01D66A;--priority-medium: #1594F6;--priority-low: #F714BA}[data-theme=gold-signal]{--bg-primary: #120f05;--bg-secondary: #1a1508;--bg-tertiary: #221c0c;--bg-hover: #2c2410;--border-color: #382c14;--text-primary: #fff8e8;--text-secondary: #e0d0a0;--text-muted: #b0a070;--accent: #FFD800;--accent-hover: #FFE033;--success: #7902AA;--warning: #FFD800;--danger: #7902AA;--info: #FFD800;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(26, 21, 8, .9);--glass-border: rgba(56, 44, 20, .5);--priority-critical: #7902AA;--priority-high: #FFD800;--priority-medium: #7902AA;--priority-low: #FFD800}[data-theme=moss]{--bg-primary: #0a0f05;--bg-secondary: #101508;--bg-tertiary: #181c0c;--bg-hover: #202410;--border-color: #283014;--text-primary: #e8f5e0;--text-secondary: #a0c090;--text-muted: #709060;--accent: #B57EDC;--accent-hover: #C498E8;--success: #4A8123;--warning: #FFFFFF;--danger: #B57EDC;--info: #4A8123;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(16, 21, 8, .9);--glass-border: rgba(40, 48, 20, .5);--priority-critical: #B57EDC;--priority-high: #4A8123;--priority-medium: #FFFFFF;--priority-low: #4A8123}[data-theme=zen]{--bg-primary: #080808;--bg-secondary: #0f0f0f;--bg-tertiary: #161616;--bg-hover: #1e1e1e;--border-color: #282828;--text-primary: #e8e8e8;--text-secondary: #a0a0a0;--text-muted: #707070;--accent: #B7F684;--accent-hover: #C8F9A0;--success: #B7F684;--warning: #BCC4C7;--danger: #000000;--info: #BCC4C7;--shadow: 0 4px 12px rgba(0,0,0,.4);--glass-bg: rgba(8, 8, 8, .9);--glass-border: rgba(40, 40, 40, .5);--priority-critical: #000000;--priority-high: #BCC4C7;--priority-medium: #FFFFFF;--priority-low: #B7F684}[data-theme=dusty]{--bg-primary: #100c0a;--bg-secondary: #181210;--bg-tertiary: #201815;--bg-hover: #281c18;--border-color: #38241e;--text-primary: #f5e8e0;--text-secondary: #c0a090;--text-muted: #907060;--accent: #F89FC9;--accent-hover: #FAB8D8;--success: #2E2826;--warning: #FEE900;--danger: #7E7E7E;--info: #F89FC9;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(18, 12, 10, .9);--glass-border: rgba(56, 36, 30, .5);--priority-critical: #7E7E7E;--priority-high: #FEE900;--priority-medium: #F89FC9;--priority-low: #2E2826}[data-theme=violet]{--bg-primary: #0f0818;--bg-secondary: #150f25;--bg-tertiary: #1c1430;--bg-hover: #241a3d;--border-color: #2e2050;--text-primary: #f0e5ff;--text-secondary: #c0a0e0;--text-muted: #9070b0;--accent: #B65AB6;--accent-hover: #C878C8;--success: #FFD509;--warning: #CD8FCD;--danger: #000000;--info: #B65AB6;--shadow: 0 4px 12px rgba(0,0,0,.3);--glass-bg: rgba(21, 15, 37, .9);--glass-border: rgba(46, 32, 80, .5);--priority-critical: #000000;--priority-high: #B65AB6;--priority-medium: #CD8FCD;--priority-low: #FFD509}*{margin:0;padding:0;box-sizing:border-box}html{font-size:16px;scroll-behavior:smooth}body{font-family:var(--font);background:var(--bg-primary);color:var(--text-primary);line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}#app{min-height:100vh;display:flex;flex-direction:column}a{color:var(--accent);text-decoration:none;transition:color .2s}a:hover{color:var(--accent-hover)}button{cursor:pointer;border:none;background:var(--bg-tertiary);color:var(--text-primary);padding:.5rem 1rem;border-radius:var(--radius);font-family:var(--font);font-size:.875rem;transition:all .2s;display:inline-flex;align-items:center;gap:.5rem;border:1px solid var(--border-color)}button:hover{background:var(--bg-hover);border-color:var(--accent)}button:disabled{opacity:.5;cursor:not-allowed}button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}button.primary:hover{background:var(--accent-hover)}button.danger{background:var(--danger);color:#fff;border-color:var(--danger)}button.small{padding:.25rem .5rem;font-size:.75rem}input,textarea,select{font-family:var(--font);font-size:.875rem;padding:.5rem .75rem;border-radius:var(--radius);border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);outline:none;transition:border-color .2s;width:100%}input:focus,textarea:focus,select:focus{border-color:var(--accent)}textarea{resize:vertical;min-height:80px}select{cursor:pointer}.app-header{background:var(--glass-bg);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--glass-border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}.app-title{font-size:1.25rem;font-weight:700;display:flex;align-items:center;gap:.5rem}.app-title svg{width:24px;height:24px}.header-actions{display:flex;align-items:center;gap:.75rem}.user-info{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--text-secondary)}.user-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--border-color)}.app-main{flex:1;padding:1.5rem;max-width:1400px;margin:0 auto;width:100%}.auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem}.auth-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;padding:2.5rem;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow)}.auth-card h1{font-size:1.75rem;margin-bottom:.5rem}.auth-card p{color:var(--text-secondary);margin-bottom:1.5rem;font-size:.9rem}.auth-methods{display:flex;flex-direction:column;gap:.75rem}.auth-divider{display:flex;align-items:center;gap:1rem;margin:.5rem 0;color:var(--text-muted);font-size:.8rem}.auth-divider:before,.auth-divider:after{content:"";flex:1;height:1px;background:var(--border-color)}.auth-toggle{margin-top:1.5rem;font-size:.85rem;color:var(--text-secondary)}.auth-toggle a{color:var(--accent);cursor:pointer}.toolbar{display:flex;flex-wrap:wrap;gap:.75rem;margin-bottom:1.5rem;align-items:center}.toolbar-left{display:flex;flex-wrap:wrap;gap:.75rem;flex:1}.search-box{position:relative;min-width:240px;flex:1;max-width:400px}.search-box input{padding-left:2.25rem}.search-icon{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none}.filter-group{display:flex;align-items:center;gap:.5rem}.filter-group label{font-size:.8rem;color:var(--text-secondary);white-space:nowrap}.filter-group select{width:auto;min-width:120px}.toolbar-right{display:flex;gap:.5rem;align-items:center}.stats-bar{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}.stat-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius);padding:1rem 1.25rem;flex:1;min-width:140px}.stat-value{font-size:1.5rem;font-weight:700;color:var(--accent)}.stat-label{font-size:.75rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-top:.25rem}.issues-table-wrapper{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;overflow:hidden}.issues-table{width:100%;border-collapse:collapse;font-size:.875rem}.issues-table thead{background:var(--bg-tertiary)}.issues-table th{padding:.75rem 1rem;text-align:left;font-weight:600;color:var(--text-secondary);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;-webkit-user-select:none;user-select:none;white-space:nowrap;border-bottom:1px solid var(--border-color)}.issues-table th:hover{color:var(--accent)}.issues-table th .sort-arrow{margin-left:.25rem;opacity:.5}.issues-table th.sorted .sort-arrow{opacity:1;color:var(--accent)}.issues-table td{padding:.75rem 1rem;border-bottom:1px solid var(--border-color);vertical-align:middle}.issues-table tbody tr{transition:background .15s}.issues-table tbody tr:hover{background:var(--bg-hover)}.repo-group-header{background:var(--bg-tertiary);font-weight:600;color:var(--text-secondary);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}.repo-group-header td{padding:.5rem 1rem;border-bottom:2px solid var(--border-color)}.issue-title{color:var(--accent);font-weight:500;display:inline;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.issue-gh-link{font-size:.75rem;opacity:.7;margin-left:.5rem;white-space:nowrap}.issue-gh-link:hover{opacity:1}.issue-number{color:var(--text-muted);font-size:.8rem}.priority-badge{display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:999px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em}.priority-critical{background:#f8514926;color:var(--priority-critical)}.priority-high{background:#d2992226;color:var(--priority-high)}.priority-medium{background:#58a6ff26;color:var(--priority-medium)}.priority-low{background:#3fb95026;color:var(--priority-low)}.priority-none{background:#6e768126;color:var(--priority-none)}.status-badge{display:inline-flex;align-items:center;padding:.2rem .5rem;border-radius:999px;font-size:.7rem;font-weight:600;text-transform:capitalize;cursor:pointer;border:1px solid transparent;transition:all .2s}.status-badge:hover{border-color:var(--accent)}.status-todo{background:#6e768126;color:var(--status-todo)}.status-in-progress{background:#d2992226;color:var(--status-in-progress)}.status-done{background:#3fb95026;color:var(--status-done)}.label-list{display:flex;flex-wrap:wrap;gap:.25rem}.label-chip{font-size:.7rem;padding:.15rem .4rem;border-radius:999px;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-color)}.issue-actions{display:flex;gap:.25rem}.issues-cards{display:none;flex-direction:column;gap:.75rem}.issue-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius);padding:1rem;cursor:pointer;transition:all .2s}.issue-card:hover{border-color:var(--accent)}.issue-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;margin-bottom:.5rem}.issue-card-title{font-weight:600;color:var(--accent);font-size:.95rem;line-height:1.4}.issue-card-meta{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;font-size:.8rem;color:var(--text-secondary)}.issue-card-repo{font-weight:500;color:var(--text-primary)}.issue-card-footer{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem;align-items:center}.modal-overlay{position:fixed;top:0;right:0;bottom:0;left:0;background:#0009;display:flex;align-items:center;justify-content:center;z-index:200;padding:1rem;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}.modal{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow)}.modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}.modal-header h2{font-size:1.1rem;line-height:1.4;flex:1}.modal-close{background:none;border:none;font-size:1.5rem;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);border-radius:var(--radius)}.modal-close:hover{background:var(--bg-hover);color:var(--text-primary)}.modal-body{padding:1.5rem}.modal-section{margin-bottom:1.5rem}.modal-section h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-secondary);margin-bottom:.75rem}.comment{padding:.75rem 0;border-bottom:1px solid var(--border-color)}.comment:last-child{border-bottom:none}.comment-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;font-size:.8rem}.comment-author{font-weight:600}.comment-date{color:var(--text-muted)}.comment-body{font-size:.875rem;line-height:1.5}.comment-body a{color:var(--accent)}.comment-form{display:flex;gap:.5rem;margin-top:1rem}.comment-form textarea{flex:1}.settings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-bottom:1.5rem}.settings-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius);padding:1rem}.settings-card h3{font-size:.9rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}.settings-actions{display:flex;gap:.5rem;flex-wrap:wrap}.toast-container{position:fixed;bottom:1.5rem;right:1.5rem;z-index:300;display:flex;flex-direction:column;gap:.5rem}.toast{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius);padding:.75rem 1rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:.75rem;min-width:280px;max-width:400px;animation:toastIn .3s ease}@keyframes toastIn{0%{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.toast.success{border-left:3px solid var(--success)}.toast.error{border-left:3px solid var(--danger)}.toast.warning{border-left:3px solid var(--warning)}.toast.info{border-left:3px solid var(--info)}.toast-message{flex:1;font-size:.875rem}.toast-close{background:none;border:none;padding:0;font-size:1.1rem;color:var(--text-muted)}.skeleton{background:linear-gradient(90deg,var(--bg-tertiary) 25%,var(--bg-hover) 50%,var(--bg-tertiary) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius);height:16px;margin-bottom:.5rem}@keyframes shimmer{0%{background-position:200% 0}to{background-position:-200% 0}}.loading-spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border-color);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.empty-state{text-align:center;padding:4rem 2rem;color:var(--text-secondary)}.empty-state svg{width:64px;height:64px;margin-bottom:1rem;opacity:.5}.error-state{background:#f851491a;border:1px solid rgba(248,81,73,.3);border-radius:var(--radius);padding:1rem;margin:1rem 0;display:flex;align-items:center;gap:.75rem}@media(max-width:768px){.app-header{padding:.5rem 1rem}.app-main{padding:1rem}.issues-table{display:none}.issues-cards{display:flex}.toolbar{flex-direction:column;align-items:stretch}.toolbar-left{flex-direction:column}.search-box{max-width:none}.stats-bar{gap:.5rem}.stat-card{min-width:100px;padding:.75rem}.modal{max-height:90vh;margin:.5rem}}@media(min-width:769px){.issues-cards{display:none!important}}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:var(--bg-primary)}::-webkit-scrollbar-thumb{background:var(--bg-hover);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}.fade-in{animation:fadeIn .3s ease}@keyframes fadeIn{0%{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.pulse{animation:pulse 2s infinite}@keyframes pulse{0%,to{opacity:1}50%{opacity:.5}}</style>
 </head>
 <body>
   <div id="app"></div>
-  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

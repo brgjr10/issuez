@@ -47,5 +47,5 @@ if (!html.includes('data-theme=rainbow')) {
 }
 
 fs.writeFileSync(distHtmlPath, html);
-// Don't overwrite root index.html - keep it as clean entry point for builds
-console.log('Patched dist/index.html');
+fs.copyFileSync(distHtmlPath, rootHtmlPath);
+console.log('Patched dist/index.html and copied to root index.html');
