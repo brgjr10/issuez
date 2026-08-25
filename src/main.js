@@ -12,6 +12,19 @@ import { getState, setState, subscribe, loadPersisted, persistLayout, persistThe
 
 let toastContainer = null;
 
+function getPriority(issue) {
+  return issue.labels.find(l => l.name.startsWith('priority:'))?.name.replace('priority:', '') || null;
+}
+
+function getStatus(issue) {
+  return issue.labels.find(l => l.name.startsWith('status:'))?.name.replace('status:', '') || null;
+}
+
+function getPrioritySortValue(issue) {
+  const p = getPriority(issue);
+  return PRIORITY_ORDER[p] ?? 99;
+}
+
 function initTheme() {
   const saved = localStorage.getItem(THEME_KEY) || 'dark';
   setState({ theme: saved });
@@ -138,7 +151,7 @@ function renderStats() {
   const s = getState();
   const open = s.filteredIssues.filter(i => i.state === 'open').length;
   const closed = s.filteredIssues.filter(i => i.state === 'closed').length;
-  const critical = s.filteredIssues.filter(i => i.priority === 'critical').length;
+  const critical = s.filteredIssues.filter(i => getPriority(i) === 'critical').length;
   return html`
     <div class="stats-bar">
       <div class="stat-card"><div class="stat-value">${s.filteredIssues.length}</div><div class="stat-label">Total</div></div>
@@ -175,7 +188,7 @@ function renderTable() {
   const sorted = [...s.filteredIssues].sort((a, b) => {
     let cmp = 0;
     switch (s.sortBy) {
-      case 'priority': cmp = (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99); break;
+      case 'priority': cmp = getPrioritySortValue(a) - getPrioritySortValue(b); break;
       case 'created': cmp = new Date(b.created_at) - new Date(a.created_at); break;
       case 'updated': cmp = new Date(b.updated_at) - new Date(a.updated_at); break;
       case 'repo': cmp = a.repo.localeCompare(b.repo); break;
@@ -217,7 +230,7 @@ function renderTable() {
               <tr>
                 <td><span style="font-weight:500; font-size:0.8rem;">${escapeHtml(issue.repo)}</span></td>
                 <td>
-                   <span class="priority-badge priority-${issue.priority || 'none'}" onclick="window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
+                   <span class="priority-badge priority-${getPriority(issue) || 'none'}" onclick="window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[getPriority(issue)] || 'None'}</span>
                 </td>
                 <td>
                   <span class="issue-title" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">${escapeHtml(issue.title)}</span>
@@ -225,9 +238,9 @@ function renderTable() {
                   <span class="issue-number">#${issue.number}</span>
                 </td>
                 <td>
-                  <span class="status-badge status-${issue.status || 'todo'}" onclick="window._cycleStatus('${issue.repo_full}', ${issue.number})" title="Click to change status">
-                    ${STATUS_LABELS[issue.status] || 'To Do'}
-                  </span>
+                   <span class="status-badge status-${getStatus(issue) || 'todo'}" onclick="window._cycleStatus('${issue.repo_full}', ${issue.number})" title="Click to change status">
+                     ${STATUS_LABELS[getStatus(issue)] || 'To Do'}
+                   </span>
                 </td>
                 <td>
                   <div class="label-list">
@@ -273,7 +286,7 @@ function renderCards() {
   const sorted = [...s.filteredIssues].sort((a, b) => {
     let cmp = 0;
     switch (s.sortBy) {
-      case 'priority': cmp = (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99); break;
+      case 'priority': cmp = getPrioritySortValue(a) - getPrioritySortValue(b); break;
       case 'created': cmp = new Date(b.created_at) - new Date(a.created_at); break;
       case 'updated': cmp = new Date(b.updated_at) - new Date(a.updated_at); break;
       case 'repo': cmp = a.repo.localeCompare(b.repo); break;
@@ -298,11 +311,11 @@ function renderCards() {
                 <span>${timeAgo(issue.updated_at)}</span>
               </div>
             </div>
-            <span class="priority-badge priority-${issue.priority || 'none'}" onclick="event.stopPropagation(); window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
+            <span class="priority-badge priority-${getPriority(issue) || 'none'}" onclick="event.stopPropagation(); window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[getPriority(issue)] || 'None'}</span>
           </div>
           <div class="issue-card-footer">
-            <span class="status-badge status-${issue.status || 'todo'}" onclick="event.stopPropagation(); window._cycleStatus('${issue.repo_full}', ${issue.number})">
-              ${STATUS_LABELS[issue.status] || 'To Do'}
+            <span class="status-badge status-${getStatus(issue) || 'todo'}" onclick="event.stopPropagation(); window._cycleStatus('${issue.repo_full}', ${issue.number})">
+              ${STATUS_LABELS[getStatus(issue)] || 'To Do'}
             </span>
             <div class="label-list">
               ${issue.labels.slice(0, 4).map(l => html`<span class="label-chip" style="border-color:#${l.color}40; color:#${l.color};">${escapeHtml(l.name)}</span>`).join('')}
@@ -332,9 +345,9 @@ function renderIssueModal() {
               <span>&#183;</span>
               <span>#${issue.number}</span>
               <span>&#183;</span>
-            <span class="priority-badge priority-${issue.priority || 'none'}" onclick="event.stopPropagation(); window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[issue.priority] || 'None'}</span>
+            <span class="priority-badge priority-${getPriority(issue) || 'none'}" onclick="event.stopPropagation(); window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[getPriority(issue)] || 'None'}</span>
               <span>&#183;</span>
-              <span class="status-badge status-${issue.status || 'todo'}" onclick="window._cycleStatusFromModal()">${STATUS_LABELS[issue.status] || 'To Do'}</span>
+              <span class="status-badge status-${getStatus(issue) || 'todo'}" onclick="window._cycleStatusFromModal()">${STATUS_LABELS[getStatus(issue)] || 'To Do'}</span>
             </div>
           </div>
           <button class="modal-close" onclick="window._closeIssue()">&times;</button>
@@ -350,16 +363,16 @@ function renderIssueModal() {
               <button onclick="window._toggleIssueStateFromModal()">${issue.state === 'open' ? 'Close Issue' : 'Reopen Issue'}</button>
               <select id="modal-priority" onchange="window._setPriorityFromModal(this.value)" style="width:auto; min-width:120px;">
                 <option value="">Set Priority...</option>
-                <option value="critical" ${issue.priority === 'critical' ? 'selected' : ''}>Critical</option>
-                <option value="high" ${issue.priority === 'high' ? 'selected' : ''}>High</option>
-                <option value="medium" ${issue.priority === 'medium' ? 'selected' : ''}>Medium</option>
-                <option value="low" ${issue.priority === 'low' ? 'selected' : ''}>Low</option>
+                <option value="critical" ${getPriority(issue) === 'critical' ? 'selected' : ''}>Critical</option>
+                <option value="high" ${getPriority(issue) === 'high' ? 'selected' : ''}>High</option>
+                <option value="medium" ${getPriority(issue) === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="low" ${getPriority(issue) === 'low' ? 'selected' : ''}>Low</option>
               </select>
               <select id="modal-status" onchange="window._setStatusFromModal(this.value)" style="width:auto; min-width:140px;">
                 <option value="">Set Status...</option>
-                <option value="todo" ${issue.status === 'todo' ? 'selected' : ''}>To Do</option>
-                <option value="in-progress" ${issue.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-                <option value="done" ${issue.status === 'done' ? 'selected' : ''}>Done</option>
+                <option value="todo" ${getStatus(issue) === 'todo' ? 'selected' : ''}>To Do</option>
+                <option value="in-progress" ${getStatus(issue) === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                <option value="done" ${getStatus(issue) === 'done' ? 'selected' : ''}>Done</option>
               </select>
             </div>
           </div>
@@ -542,7 +555,7 @@ async function loadAllIssues() {
 export async function patLogin(pat) {
   setToken(pat);
   sessionStorage.setItem(STORAGE_KEY, pat);
-  await initApp();
+  await initializeApp();
   setState({ showWelcome: true });
 }
 
@@ -631,7 +644,7 @@ async function cycleStatus(repo, number) {
   const cycle = ['todo', 'in-progress', 'done'];
   const issue = getState().issues.find(i => i.repo_full === repo && i.number === number);
   if (!issue) return;
-  const current = issue.status || 'todo';
+  const current = getStatus(issue) || 'todo';
   const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
   const label = `status:${next}`;
   const owner = repo.split('/')[0];
@@ -642,7 +655,8 @@ async function cycleStatus(repo, number) {
   try {
     await Promise.all(promises);
     showToast(`Status set to ${STATUS_LABELS[next]}`, 'success');
-    const updated = { ...issue, status: next };
+    const newLabels = issue.labels.filter(l => !l.name.startsWith('status:')).concat({ name: label, color: 'a2eeef' });
+    const updated = { ...issue, labels: newLabels };
     setState({
       issues: getState().issues.map(i => i.repo_full === repo && i.number === number ? updated : i),
       filteredIssues: getState().filteredIssues.map(i => i.repo_full === repo && i.number === number ? updated : i),
@@ -655,23 +669,24 @@ async function cycleStatus(repo, number) {
   }
 }
 
-async function cyclePriority(repo, number) {
+async function cycleIssuePriority(repo, number) {
   const cycle = ['critical', 'high', 'medium', 'low'];
   const issue = getState().issues.find(i => i.repo_full === repo && i.number === number);
   if (!issue) return;
-  const current = issue.priority || 'none';
-  const currentIndex = cycle.indexOf(current);
+  const currentPriority = getPriority(issue);
+  const currentIndex = cycle.indexOf(currentPriority || '');
   const next = currentIndex >= 0 ? cycle[(currentIndex + 1) % cycle.length] : 'critical';
   const label = `priority:${next}`;
   const owner = repo.split('/')[0];
   const repoName = repo.split('/')[1];
   const promises = [];
-  if (currentIndex >= 0) promises.push(removeLabel(owner, repoName, number, `priority:${current}`).catch(() => { }));
+  if (currentPriority) promises.push(removeLabel(owner, repoName, number, `priority:${currentPriority}`).catch(() => { }));
   promises.push(addLabel(owner, repoName, number, label));
   try {
     await Promise.all(promises);
     showToast(`Priority set to ${PRIORITY_LABELS[next]}`, 'success');
-    const updated = { ...issue, priority: next };
+    const newLabels = issue.labels.filter(l => !l.name.startsWith('priority:')).concat({ name: label, color: 'b60205' });
+    const updated = { ...issue, labels: newLabels };
     setState({
       issues: getState().issues.map(i => i.repo_full === repo && i.number === number ? updated : i),
       filteredIssues: getState().filteredIssues.map(i => i.repo_full === repo && i.number === number ? updated : i),
@@ -691,12 +706,14 @@ async function setPriorityFromModal(priority) {
   const owner = issue.repo_full.split('/')[0];
   const repoName = issue.repo_full.split('/')[1];
   const promises = [];
-  if (issue.priority) promises.push(removeLabel(owner, repoName, issue.number, `priority:${issue.priority}`).catch(() => { }));
+  const currentPriority = getPriority(issue);
+  if (currentPriority) promises.push(removeLabel(owner, repoName, issue.number, `priority:${currentPriority}`).catch(() => { }));
   promises.push(addLabel(owner, repoName, issue.number, `priority:${priority}`));
   try {
     await Promise.all(promises);
     showToast(`Priority set to ${PRIORITY_LABELS[priority]}`, 'success');
-    const updated = { ...issue, priority };
+    const newLabels = issue.labels.filter(l => !l.name.startsWith('priority:')).concat({ name: `priority:${priority}`, color: 'b60205' });
+    const updated = { ...issue, labels: newLabels };
     setState({
       issues: getState().issues.map(i => i.repo_full === issue.repo_full && i.number === issue.number ? updated : i),
       filteredIssues: getState().filteredIssues.map(i => i.repo_full === issue.repo_full && i.number === issue.number ? updated : i),
@@ -716,12 +733,14 @@ async function setStatusFromModal(status) {
   const owner = issue.repo_full.split('/')[0];
   const repoName = issue.repo_full.split('/')[1];
   const promises = [];
-  if (issue.status && issue.status !== 'todo') promises.push(removeLabel(owner, repoName, issue.number, `status:${issue.status}`).catch(() => { }));
+  const currentStatus = getStatus(issue);
+  if (currentStatus && currentStatus !== 'todo') promises.push(removeLabel(owner, repoName, issue.number, `status:${currentStatus}`).catch(() => { }));
   promises.push(addLabel(owner, repoName, issue.number, `status:${status}`));
   try {
     await Promise.all(promises);
     showToast(`Status set to ${STATUS_LABELS[status]}`, 'success');
-    const updated = { ...issue, status };
+    const newLabels = issue.labels.filter(l => !l.name.startsWith('status:')).concat({ name: `status:${status}`, color: 'a2eeef' });
+    const updated = { ...issue, labels: newLabels };
     setState({
       issues: getState().issues.map(i => i.repo_full === issue.repo_full && i.number === issue.number ? updated : i),
       filteredIssues: getState().filteredIssues.map(i => i.repo_full === issue.repo_full && i.number === issue.number ? updated : i),
@@ -778,7 +797,7 @@ export function importLayout(fileInput) {
   reader.readAsText(file);
 }
 
-async function initApp() {
+async function initializeApp() {
   const stored = sessionStorage.getItem(STORAGE_KEY);
   if (stored) {
     setToken(stored);
@@ -824,7 +843,7 @@ function setupGlobals() {
     toggleIssueState(issue.repo_full, issue.number);
   };
   window._cycleStatus = cycleStatus;
-  window._cyclePriority = cyclePriority;
+  window._cyclePriority = cycleIssuePriority;
   window._cycleStatusFromModal = () => {
     const issue = getState().selectedIssue;
     if (!issue) return;
@@ -844,7 +863,7 @@ async function boot() {
   applyTheme(getState().theme);
   setupGlobals();
   subscribe(render);
-  await initApp();
+  await initializeApp();
 }
 
 if (document.readyState === 'loading') {
