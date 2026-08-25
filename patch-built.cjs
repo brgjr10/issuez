@@ -38,7 +38,7 @@ if (!html.includes('cyclePriorityPatched=')) {
 const cssPath = path.join(__dirname, 'src', 'styles.css');
 const cssContent = fs.readFileSync(cssPath, 'utf-8');
 
-if (!html.includes('data-theme="pride"')) {
+if (!html.includes('data-theme=rainbow')) {
   const cssStart = html.indexOf('<style id="theme-styles"></style>');
   if (cssStart >= 0) {
     html = html.replace('<style id="theme-styles"></style>', '<style id="theme-styles">\n' + cssContent + '\n</style>');

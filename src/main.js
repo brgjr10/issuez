@@ -1,4 +1,4 @@
-import {
+﻿import {
   $, $$, html, escapeHtml, debounce, formatDate, timeAgo,
   PRIORITY_ORDER, PRIORITY_LABELS, STATUS_LABELS, STORAGE_KEY, THEME_KEY,
 } from './utils/helpers.js';
@@ -8,6 +8,7 @@ import {
   updateIssue, addLabel, removeLabel, formatIssueForDisplay,
 } from './api/github.js';
 import { getState, setState, subscribe, loadPersisted, persistLayout, persistTheme } from './state/store.js';
+import './styles.css';
 import './styles.css';
 
 
@@ -64,19 +65,19 @@ function renderHeader() {
           <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
           <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
           <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
-          <option value="pride" ${s.theme === 'pride' ? 'selected' : ''}>Pride</option>
-          <option value="lesbian" ${s.theme === 'lesbian' ? 'selected' : ''}>Lesbian</option>
-          <option value="transgender" ${s.theme === 'transgender' ? 'selected' : ''}>Transgender</option>
-          <option value="bisexual" ${s.theme === 'bisexual' ? 'selected' : ''}>Bisexual</option>
-          <option value="asexual" ${s.theme === 'asexual' ? 'selected' : ''}>Asexual</option>
-          <option value="pansexual" ${s.theme === 'pansexual' ? 'selected' : ''}>Pansexual</option>
-          <option value="genderfluid" ${s.theme === 'genderfluid' ? 'selected' : ''}>Genderfluid</option>
-          <option value="polysexual" ${s.theme === 'polysexual' ? 'selected' : ''}>Polysexual</option>
-          <option value="intersex" ${s.theme === 'intersex' ? 'selected' : ''}>Intersex</option>
-          <option value="genderqueer" ${s.theme === 'genderqueer' ? 'selected' : ''}>Genderqueer</option>
-          <option value="agender" ${s.theme === 'agender' ? 'selected' : ''}>Agender</option>
-          <option value="queerplatonic" ${s.theme === 'queerplatonic' ? 'selected' : ''}>Queerplatonic</option>
-          <option value="monosexual" ${s.theme === 'monosexual' ? 'selected' : ''}>Monosexual</option>
+          <option value="rainbow" ${s.theme === 'rainbow' ? 'selected' : ''}>Rainbow</option>
+          <option value="sunset-glow" ${s.theme === 'sunset-glow' ? 'selected' : ''}>Sunset Glow</option>
+          <option value="sky-gradient" ${s.theme === 'sky-gradient' ? 'selected' : ''}>Sky Gradient</option>
+          <option value="berry-cobalt" ${s.theme === 'berry-cobalt' ? 'selected' : ''}>Berry Cobalt</option>
+          <option value="ghost" ${s.theme === 'ghost' ? 'selected' : ''}>Ghost</option>
+          <option value="solar" ${s.theme === 'solar' ? 'selected' : ''}>Solar</option>
+          <option value="eclipse" ${s.theme === 'eclipse' ? 'selected' : ''}>Eclipse</option>
+          <option value="pop" ${s.theme === 'pop' ? 'selected' : ''}>Pop</option>
+          <option value="gold-signal" ${s.theme === 'gold-signal' ? 'selected' : ''}>Gold Signal</option>
+          <option value="moss" ${s.theme === 'moss' ? 'selected' : ''}>Moss</option>
+          <option value="zen" ${s.theme === 'zen' ? 'selected' : ''}>Zen</option>
+          <option value="dusty" ${s.theme === 'dusty' ? 'selected' : ''}>Dusty</option>
+          <option value="violet" ${s.theme === 'violet' ? 'selected' : ''}>Violet</option>
         </select>
         <div class="user-info">
           <img class="user-avatar" src="${s.user?.avatar_url || ''}" alt="">
@@ -425,19 +426,19 @@ function renderSettings() {
                  <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
                  <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
                  <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
-                 <option value="pride" ${s.theme === 'pride' ? 'selected' : ''}>Pride</option>
-                 <option value="lesbian" ${s.theme === 'lesbian' ? 'selected' : ''}>Lesbian</option>
-                 <option value="transgender" ${s.theme === 'transgender' ? 'selected' : ''}>Transgender</option>
-                 <option value="bisexual" ${s.theme === 'bisexual' ? 'selected' : ''}>Bisexual</option>
-                 <option value="asexual" ${s.theme === 'asexual' ? 'selected' : ''}>Asexual</option>
-                 <option value="pansexual" ${s.theme === 'pansexual' ? 'selected' : ''}>Pansexual</option>
-                 <option value="genderfluid" ${s.theme === 'genderfluid' ? 'selected' : ''}>Genderfluid</option>
-                 <option value="polysexual" ${s.theme === 'polysexual' ? 'selected' : ''}>Polysexual</option>
-                 <option value="intersex" ${s.theme === 'intersex' ? 'selected' : ''}>Intersex</option>
-                 <option value="genderqueer" ${s.theme === 'genderqueer' ? 'selected' : ''}>Genderqueer</option>
-                 <option value="agender" ${s.theme === 'agender' ? 'selected' : ''}>Agender</option>
-                 <option value="queerplatonic" ${s.theme === 'queerplatonic' ? 'selected' : ''}>Queerplatonic</option>
-                 <option value="monosexual" ${s.theme === 'monosexual' ? 'selected' : ''}>Monosexual</option>
+                 <option value="rainbow" ${s.theme === 'rainbow' ? 'selected' : ''}>Rainbow</option>
+                 <option value="sunset-glow" ${s.theme === 'sunset-glow' ? 'selected' : ''}>Sunset Glow</option>
+                 <option value="sky-gradient" ${s.theme === 'sky-gradient' ? 'selected' : ''}>Sky Gradient</option>
+                 <option value="berry-cobalt" ${s.theme === 'berry-cobalt' ? 'selected' : ''}>Berry Cobalt</option>
+                 <option value="ghost" ${s.theme === 'ghost' ? 'selected' : ''}>Ghost</option>
+                 <option value="solar" ${s.theme === 'solar' ? 'selected' : ''}>Solar</option>
+                 <option value="eclipse" ${s.theme === 'eclipse' ? 'selected' : ''}>Eclipse</option>
+                 <option value="pop" ${s.theme === 'pop' ? 'selected' : ''}>Pop</option>
+                 <option value="gold-signal" ${s.theme === 'gold-signal' ? 'selected' : ''}>Gold Signal</option>
+                 <option value="moss" ${s.theme === 'moss' ? 'selected' : ''}>Moss</option>
+                 <option value="zen" ${s.theme === 'zen' ? 'selected' : ''}>Zen</option>
+                 <option value="dusty" ${s.theme === 'dusty' ? 'selected' : ''}>Dusty</option>
+                 <option value="violet" ${s.theme === 'violet' ? 'selected' : ''}>Violet</option>
                </select>
             </div>
             <div class="settings-card">
