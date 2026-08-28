@@ -118,20 +118,12 @@ function renderAuth() {
 
 function renderToolbar() {
   const s = getState();
-  const repos = [...new Set(s.filteredIssues.map(i => i.repo))];
   return html`
     <div class="toolbar">
       <div class="toolbar-left">
         <div class="search-box">
           <span class="search-icon">&#128269;</span>
           <input type="text" id="search-input" placeholder="Search issues..." value="${escapeHtml(s.searchQuery)}" oninput="window._onSearch(this.value)">
-        </div>
-        <div class="filter-group">
-          <label>Repo</label>
-          <select id="filter-repo" onchange="window._setFilter('repo', this.value)">
-            <option value="all">All</option>
-            ${repos.map(r => html`<option value="${escapeHtml(r)}" ${s.filterRepo === r ? 'selected' : ''}>${escapeHtml(r)}</option>`).join('')}
-          </select>
         </div>
         <div class="filter-group">
           <label>State</label>
@@ -204,7 +196,6 @@ function renderTable() {
       case 'priority': cmp = getPrioritySortValue(a) - getPrioritySortValue(b); break;
       case 'created': cmp = new Date(b.created_at) - new Date(a.created_at); break;
       case 'updated': cmp = new Date(b.updated_at) - new Date(a.updated_at); break;
-      case 'repo': cmp = a.repo.localeCompare(b.repo); break;
       case 'comments': cmp = b.comments - a.comments; break;
       default: cmp = 0;
     }
@@ -225,9 +216,16 @@ function renderTable() {
   return html`
     <div class="issues-table-wrapper">
       <table class="issues-table">
+        <colgroup>
+          <col style="width:8%">
+          <col style="width:42%">
+          <col style="width:7%">
+          <col style="width:14%">
+          <col style="width:10%">
+          <col style="width:19%">
+        </colgroup>
         <thead>
           <tr>
-            <th onclick="window._setSort('repo')">Repo ${sortArrow('repo')}</th>
             <th onclick="window._setSort('priority')">Priority ${sortArrow('priority')}</th>
             <th>Issue</th>
             <th>Status</th>
@@ -238,17 +236,16 @@ function renderTable() {
         </thead>
         <tbody>
           ${Object.entries(grouped).map(([repo, issues]) => html`
-            <tr class="repo-group-header"><td colspan="7">${escapeHtml(repo)} <span style="opacity:0.6; font-weight:400;">(${issues.length})</span></td></tr>
+            <tr class="repo-group-header"><td colspan="6"><div class="repo-group-header-content">${escapeHtml(repo)} <span class="repo-group-header-count">(${issues.length})</span></div></td></tr>
             ${issues.map(issue => html`
               <tr>
-                <td><span style="font-weight:500; font-size:0.8rem;">${escapeHtml(issue.repo)}</span></td>
                 <td>
                    <span class="priority-badge priority-${getPriority(issue) || 'none'}" onclick="window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[getPriority(issue)] || 'None'}</span>
                 </td>
-                <td>
-                  <span class="issue-title" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">${escapeHtml(issue.title)}</span>
+                <td class="issue-cell">
+                   <span class="issue-title" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">${escapeHtml(issue.title)}</span>
                    <a class="issue-gh-link" href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>
-                  <span class="issue-number">#${issue.number}</span>
+                   <span class="issue-number">#${issue.number}</span>
                 </td>
                 <td>
                    <span class="status-badge status-${getStatus(issue) || 'todo'}" onclick="window._cycleStatus('${issue.repo_full}', ${issue.number})" title="Click to change status">
@@ -530,7 +527,6 @@ function filterIssues() {
     const q = s.searchQuery.toLowerCase();
     list = list.filter(i => i.title.toLowerCase().includes(q) || i.body.toLowerCase().includes(q));
   }
-  if (s.filterRepo !== 'all') list = list.filter(i => i.repo === s.filterRepo);
   if (s.filterState !== 'all') list = list.filter(i => i.state === s.filterState);
   if (s.filterAssignee === 'me') list = list.filter(i => i.assignees?.some(a => a.login === s.user?.login));
   setState({ filteredIssues: list });
@@ -795,7 +791,7 @@ export function exportLayout() {
     theme: s.theme,
     sortBy: s.sortBy,
     sortDir: s.sortDir,
-    columns: ['repo', 'priority', 'issue', 'status', 'labels', 'updated', 'actions'],
+    columns: ['priority', 'issue', 'status', 'labels', 'updated', 'actions'],
     exportedAt: new Date().toISOString(),
   };
   const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' });
@@ -835,7 +831,6 @@ function setupGlobals() {
   };
   window._onSearch = debounce((v) => { setState({ searchQuery: v }); filterIssues(); }, 200);
   window._setFilter = (key, val) => {
-    if (key === 'repo') setState({ filterRepo: val });
     if (key === 'state') setState({ filterState: val });
     if (key === 'assignee') setState({ filterAssignee: val });
     filterIssues();

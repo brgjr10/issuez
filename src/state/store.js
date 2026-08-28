@@ -9,7 +9,6 @@ const state = {
   error: null,
   selectedIssue: null,
   searchQuery: '',
-  filterRepo: 'all',
   filterLabel: 'all',
   filterState: 'all',
   filterAssignee: 'all',
