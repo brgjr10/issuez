@@ -8,7 +8,6 @@ import {
   updateIssue, addLabel, removeLabel, formatIssueForDisplay,
 } from './api/github.js';
 import { getState, setState, subscribe, loadPersisted, persistLayout, persistTheme } from './state/store.js';
-import './styles.css';
 
 
 let toastContainer = null;
