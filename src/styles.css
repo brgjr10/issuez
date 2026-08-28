@@ -1109,6 +1109,7 @@ select {
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: capitalize;
+  white-space: nowrap;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s;
@@ -1119,8 +1120,8 @@ select {
 }
 
 .status-todo {
-  background: rgba(110, 118, 129, 0.15);
-  color: var(--status-todo);
+   background: rgba(110, 118, 129, 0.15);
+   color: var(--status-todo);
 }
 
 .status-in-progress {
