@@ -1,4 +1,4 @@
-﻿import {
+import {
   $, $$, html, escapeHtml, debounce, formatDate, timeAgo,
   PRIORITY_ORDER, PRIORITY_LABELS, STATUS_LABELS, STORAGE_KEY, THEME_KEY,
 } from './utils/helpers.js';
@@ -8,7 +8,6 @@ import {
   updateIssue, addLabel, removeLabel, formatIssueForDisplay,
 } from './api/github.js';
 import { getState, setState, subscribe, loadPersisted, persistLayout, persistTheme } from './state/store.js';
-import './styles.css';
 import './styles.css';
 
 
@@ -62,7 +61,7 @@ function renderHeader() {
         <select id="theme-select" onchange="window._setTheme(this.value)">
           <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dark</option>
           <option value="light" ${s.theme === 'light' ? 'selected' : ''}>Light</option>
-          <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
+                  <option value="bubbles" ${s.theme === 'bubbles' ? 'selected' : ''}>Bubbles</option>
           <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
           <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
           <option value="rainbow" ${s.theme === 'rainbow' ? 'selected' : ''}>Rainbow</option>
@@ -94,7 +93,7 @@ function renderAuth() {
     <div class="auth-screen">
       <div class="auth-card fade-in">
         <h1>Issuez</h1>
-        <p>Cross-repo GitHub issue tracker. No server, no storage — just you and GitHub.</p>
+        <p>Cross-repo GitHub issue tracker. No server, no storage � just you and GitHub.</p>
         <div style="text-align:left; margin-bottom:1rem;">
           <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
             <strong>How to get a PAT:</strong>
@@ -317,7 +316,7 @@ function renderCards() {
         <div class="issue-card" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">
           <div class="issue-card-header">
             <div>
-              <div class="issue-card-title">${escapeHtml(issue.title)} <a href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size:0.75rem; opacity:0.7;">↗</a></div>
+              <div class="issue-card-title">${escapeHtml(issue.title)} <a href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size:0.75rem; opacity:0.7;">GitHub</a></div>
               <div class="issue-card-meta">
                 <span class="issue-card-repo">${escapeHtml(issue.repo)}</span>
                 <span>&#183;</span>
@@ -423,7 +422,7 @@ function renderSettings() {
               <select id="settings-theme" onchange="window._setTheme(this.value)" style="margin-bottom:0.5rem;">
                  <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dark</option>
                  <option value="light" ${s.theme === 'light' ? 'selected' : ''}>Light</option>
-                 <option value="colorful" ${s.theme === 'colorful' ? 'selected' : ''}>Colorful</option>
+          <option value="bubbles" ${s.theme === 'bubbles' ? 'selected' : ''}>Bubbles</option>
                  <option value="neon" ${s.theme === 'neon' ? 'selected' : ''}>Neon</option>
                  <option value="pink" ${s.theme === 'pink' ? 'selected' : ''}>Pink</option>
                  <option value="rainbow" ${s.theme === 'rainbow' ? 'selected' : ''}>Rainbow</option>
@@ -522,6 +521,7 @@ function render() {
   `;
 
   toastContainer = $('#toast-container');
+  initCustomSelects();
 }
 
 function filterIssues() {
@@ -875,12 +875,87 @@ function setupGlobals() {
   window._dismissError = () => setState({ error: null });
 }
 
+function initCustomSelects() {
+  document.querySelectorAll('select').forEach(select => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'select-wrapper';
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'select-trigger';
+
+    const valueSpan = document.createElement('span');
+    valueSpan.className = 'select-value';
+    valueSpan.textContent = select.options[select.selectedIndex]?.textContent || '';
+
+    trigger.appendChild(valueSpan);
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'select-dropdown';
+
+    Array.from(select.options).forEach(option => {
+      const optEl = document.createElement('div');
+      optEl.className = 'select-option' + (option.selected ? ' selected' : '');
+      optEl.textContent = option.textContent;
+      optEl.dataset.value = option.value;
+      optEl.addEventListener('click', () => {
+        select.value = option.value;
+        select.dispatchEvent(new Event('change'));
+        closeAllSelects();
+        updateTriggerTexts();
+      });
+      dropdown.appendChild(optEl);
+    });
+
+    wrapper.appendChild(trigger);
+    wrapper.appendChild(dropdown);
+    select.parentNode.insertBefore(wrapper, select);
+    select.style.display = 'none';
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = wrapper.classList.contains('open');
+      closeAllSelects();
+      if (!isOpen) {
+        wrapper.classList.add('open');
+      }
+    });
+  });
+}
+
+function closeAllSelects() {
+  document.querySelectorAll('.select-wrapper.open').forEach(w => w.classList.remove('open'));
+}
+
+function updateTriggerTexts() {
+  document.querySelectorAll('.select-wrapper').forEach(wrapper => {
+    const select = wrapper.querySelector('select');
+    const valueSpan = wrapper.querySelector('.select-value');
+    if (select && valueSpan) {
+      valueSpan.textContent = select.options[select.selectedIndex]?.textContent || '';
+      const selectedOpt = wrapper.querySelector('.select-option.selected');
+      if (selectedOpt) selectedOpt.classList.remove('selected');
+      const options = wrapper.querySelectorAll('.select-option');
+      options.forEach(opt => {
+        if (opt.dataset.value === select.value) {
+          opt.classList.add('selected');
+        }
+      });
+    }
+  });
+}
+
 async function boot() {
   initTheme();
   loadPersisted();
   applyTheme(getState().theme);
   setupGlobals();
   subscribe(render);
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.select-wrapper')) {
+      closeAllSelects();
+    }
+  });
   const stored = sessionStorage.getItem(STORAGE_KEY);
   if (stored) {
     setToken(stored);
