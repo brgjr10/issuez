@@ -8,8 +8,56 @@ const timeAgo = (d) => { const s = Math.floor((Date.now() - new Date(d).getTime(
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const PRIORITY_LABELS = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' };
 const STATUS_LABELS = { 'todo': 'To Do', 'in-progress': 'In Progress', 'done': 'Done' };
+const PRIORITY_VALUES = ['critical', 'high', 'medium', 'low'];
+const STATUS_VALUES = ['todo', 'in-progress', 'done'];
 const STORAGE_KEY = 'issuez_token';
 const LAYOUT_KEY = 'issuez_layout';
 const THEME_KEY = 'issuez_theme';
 
-export { $, $$, html, escapeHtml, debounce, formatDate, timeAgo, PRIORITY_ORDER, PRIORITY_LABELS, STATUS_LABELS, STORAGE_KEY, LAYOUT_KEY, THEME_KEY };
+const getPriority = (issue) => issue.labels.find(l => l.name.startsWith('priority:'))?.name.replace('priority:', '') || null;
+const getStatus = (issue) => issue.labels.find(l => l.name.startsWith('status:'))?.name.replace('status:', '') || null;
+const getPrioritySortValue = (issue) => PRIORITY_ORDER[getPriority(issue)] ?? 99;
+
+// Label names are attacker-controlled on any repo the user can read, and they land in
+// class attributes, so they are constrained to the enum instead of escaped.
+const priorityClass = (issue) => PRIORITY_VALUES.includes(getPriority(issue)) ? getPriority(issue) : 'none';
+const statusClass = (issue) => STATUS_VALUES.includes(getStatus(issue)) ? getStatus(issue) : 'todo';
+
+const safeGitHubUrl = (url) => {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.hostname === 'github.com' ? u.href : '';
+  } catch {
+    return '';
+  }
+};
+
+const AVATAR_HOSTS = ['avatars.githubusercontent.com', 'github.com', 'camo.githubusercontent.com'];
+const safeAvatarUrl = (url) => {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && AVATAR_HOSTS.includes(u.hostname) ? u.href : '';
+  } catch {
+    return '';
+  }
+};
+
+const safeLabelColor = (color) => /^[0-9a-fA-F]{6}$/.test(String(color)) ? color : '808080';
+
+const sortIssues = (issues, sortBy, sortDir) => {
+  const dir = sortDir === 'desc' ? -1 : 1;
+  return [...issues].sort((a, b) => {
+    let cmp = 0;
+    switch (sortBy) {
+      case 'priority': cmp = getPrioritySortValue(a) - getPrioritySortValue(b); break;
+      case 'created': cmp = new Date(a.created_at) - new Date(b.created_at); break;
+      case 'updated': cmp = new Date(a.updated_at) - new Date(b.updated_at); break;
+      case 'repo': cmp = a.repo.localeCompare(b.repo); break;
+      case 'comments': cmp = a.comments - b.comments; break;
+      default: cmp = 0;
+    }
+    return cmp * dir;
+  });
+};
+
+export { $, $$, html, escapeHtml, debounce, formatDate, timeAgo, PRIORITY_ORDER, PRIORITY_LABELS, PRIORITY_VALUES, STATUS_LABELS, STATUS_VALUES, STORAGE_KEY, LAYOUT_KEY, THEME_KEY, getPriority, getStatus, getPrioritySortValue, priorityClass, statusClass, safeGitHubUrl, safeAvatarUrl, safeLabelColor, sortIssues };

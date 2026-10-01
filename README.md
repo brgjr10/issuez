@@ -93,7 +93,15 @@ Open http://localhost:3000 to see the app in development mode.
 npm run build       # Single-file HTML output (dist/index.html)
 ```
 
-The build uses `vite-plugin-singlefile` to bundle all CSS and JavaScript into a single `dist/index.html` file.
+The build uses `vite-plugin-singlefile` to bundle all CSS and JavaScript into a single `dist/index.html` file. There is no post-build patching step: `npm run build` output is the finished artifact.
+
+### Test
+
+```bash
+npm test            # vitest: helpers, sort, API layer, XSS sinks, build pipeline
+```
+
+`tests/build-pipeline.test.js` runs the real build and fails if the committed entrypoint is ever overwritten, if a post-build patcher reappears, or if the bundle stops containing behaviour that only exists in `src/`.
 
 ### API
 
@@ -123,6 +131,7 @@ The app uses the GitHub REST API v3:
 - **No cookies, no localStorage for tokens** — Only layout preferences and theme are stored locally
 - **Direct GitHub API** — All requests go directly to GitHub; no proxy or intermediary
 - **Revocable access** — You can revoke your PAT at any time from GitHub Settings → Applications
+- **Content-Security-Policy** — Shipped in `index.html` because a static host cannot set response headers. GitHub Pages also cannot set `X-Frame-Options`, so if you deploy somewhere else (or in front of Pages) add `X-Frame-Options: DENY` and `X-Content-Type-Options: nosniff` at the edge; browsers ignore `frame-ancestors` when the policy is delivered in a `<meta>` tag.
 
 ## Roadmap
 

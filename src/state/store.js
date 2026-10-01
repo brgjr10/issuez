@@ -9,7 +9,6 @@ const state = {
   error: null,
   selectedIssue: null,
   searchQuery: '',
-  filterLabel: 'all',
   filterState: 'all',
   filterAssignee: 'all',
   sortBy: 'priority',
@@ -41,21 +40,29 @@ export function loadPersisted() {
   try {
     const layout = localStorage.getItem(LAYOUT_KEY);
     if (layout) state.layout = JSON.parse(layout);
-  } catch {}
+  } catch (e) {
+    console.warn(`[issuez] Could not read ${LAYOUT_KEY} from localStorage — the value is corrupt or storage is blocked. Layout customisation will reset until that key is cleared.`, e);
+  }
   try {
     const theme = localStorage.getItem(THEME_KEY);
     if (theme) state.theme = theme;
-  } catch {}
+  } catch (e) {
+    console.warn(`[issuez] Could not read ${THEME_KEY} from localStorage — storage is blocked or full. The theme will fall back to dark on every load.`, e);
+  }
 }
 
 export function persistLayout() {
   try {
     localStorage.setItem(LAYOUT_KEY, JSON.stringify(state.layout));
-  } catch {}
+  } catch (e) {
+    console.warn(`[issuez] Could not save ${LAYOUT_KEY} — the quota is exhausted or storage is blocked. Export the layout instead if you need to keep it.`, e);
+  }
 }
 
 export function persistTheme() {
   try {
     localStorage.setItem(THEME_KEY, state.theme);
-  } catch {}
+  } catch (e) {
+    console.warn(`[issuez] Could not save ${THEME_KEY} — the quota is exhausted or storage is blocked. The theme change will not survive a reload.`, e);
+  }
 }

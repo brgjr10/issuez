@@ -2,6 +2,7 @@ import { escapeHtml, formatDate, timeAgo } from '../utils/helpers.js';
 
 const API_BASE = 'https://api.github.com';
 const PER_PAGE = 100;
+const RATE_LIMIT_MAX_WAIT_MS = 60000;
 
 let token = null;
 let rateLimit = { remaining: 5000, reset: 0 };
@@ -11,6 +12,15 @@ export function getToken() { return token; }
 export function isAuthed() { return !!token; }
 
 export function getRateLimit() { return rateLimit; }
+
+export function rateLimitWaitMs(state = rateLimit) {
+  if (state.remaining > 1) return 0;
+  return Math.max(0, state.reset - Date.now());
+}
+
+export function rateLimitExhausted() {
+  return rateLimitWaitMs() > RATE_LIMIT_MAX_WAIT_MS;
+}
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -40,10 +50,11 @@ export async function fetchWithPagination(path) {
   let url = `${API_BASE}${path}${path.includes('?') ? '&' : '?'}per_page=${PER_PAGE}&page=1`;
 
   while (url) {
-    if (rateLimit.remaining <= 1) {
-      const wait = Math.max(0, rateLimit.reset - Date.now());
-      if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    const wait = rateLimitWaitMs();
+    if (wait > RATE_LIMIT_MAX_WAIT_MS) {
+      throw new Error('GitHub rate limit reached. Try again after ' + new Date(rateLimit.reset).toLocaleTimeString());
     }
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
 
     const res = await fetch(url, {
       headers: {
@@ -87,21 +98,26 @@ export async function getUserOrgs() {
 }
 
 export async function getOrgRepos(org) {
-  return fetchWithPagination(`/orgs/${org}/repos?sort=updated&per_page=100`);
+  return fetchWithPagination(`/orgs/${encodeURIComponent(org)}/repos?sort=updated&per_page=100`);
 }
 
 export async function getIssues(owner, repo, state = 'open') {
-  const res = await fetchWithPagination(`/repos/${owner}/${repo}/issues?state=${state}&per_page=100`);
+  const res = await fetchWithPagination(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues?state=${encodeURIComponent(state)}&per_page=100`);
   return res.filter(i => !i.pull_request);
 }
 
+export async function getIssue(owner, repo, issueNumber) {
+  const res = await request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${encodeURIComponent(issueNumber)}`);
+  return res.json();
+}
+
 export async function getIssueComments(owner, repo, issueNumber) {
-  const res = await fetchWithPagination(`/repos/${owner}/${repo}/issues/${issueNumber}/comments`);
+  const res = await fetchWithPagination(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${encodeURIComponent(issueNumber)}/comments`);
   return res;
 }
 
 export async function postComment(owner, repo, issueNumber, body) {
-  const res = await request(`/repos/${owner}/${repo}/issues/${issueNumber}/comments`, {
+  const res = await request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${encodeURIComponent(issueNumber)}/comments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ body }),
@@ -110,7 +126,7 @@ export async function postComment(owner, repo, issueNumber, body) {
 }
 
 export async function updateIssue(owner, repo, issueNumber, data) {
-  const res = await request(`/repos/${owner}/${repo}/issues/${issueNumber}`, {
+  const res = await request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${encodeURIComponent(issueNumber)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -119,7 +135,7 @@ export async function updateIssue(owner, repo, issueNumber, data) {
 }
 
 export async function addLabel(owner, repo, issueNumber, label) {
-  const res = await request(`/repos/${owner}/${repo}/issues/${issueNumber}/labels`, {
+  const res = await request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${encodeURIComponent(issueNumber)}/labels`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify([label]),
@@ -128,7 +144,7 @@ export async function addLabel(owner, repo, issueNumber, label) {
 }
 
 export async function removeLabel(owner, repo, issueNumber, label) {
-  await request(`/repos/${owner}/${repo}/issues/${issueNumber}/labels/${encodeURIComponent(label)}`, {
+  await request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues/${encodeURIComponent(issueNumber)}/labels/${encodeURIComponent(label)}`, {
     method: 'DELETE',
   });
 }

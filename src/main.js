@@ -1,29 +1,18 @@
 import {
   $, $$, html, escapeHtml, debounce, formatDate, timeAgo,
-  PRIORITY_ORDER, PRIORITY_LABELS, STATUS_LABELS, STORAGE_KEY, THEME_KEY,
+  PRIORITY_LABELS, STATUS_LABELS, STORAGE_KEY, THEME_KEY,
+  getPriority, getStatus, priorityClass, statusClass,
+  safeGitHubUrl, safeAvatarUrl, safeLabelColor, sortIssues,
 } from './utils/helpers.js';
 import {
   setToken, getToken, isAuthed, getRateLimit, fetchWithPagination, getCurrentUser,
   getUserRepos, getUserOrgs, getOrgRepos, getIssues, getIssueComments, postComment,
-  updateIssue, addLabel, removeLabel, formatIssueForDisplay,
+  updateIssue, addLabel, removeLabel, formatIssueForDisplay, getIssue, rateLimitExhausted,
 } from './api/github.js';
 import { getState, setState, subscribe, loadPersisted, persistLayout, persistTheme } from './state/store.js';
 
 
 let toastContainer = null;
-
-function getPriority(issue) {
-  return issue.labels.find(l => l.name.startsWith('priority:'))?.name.replace('priority:', '') || null;
-}
-
-function getStatus(issue) {
-  return issue.labels.find(l => l.name.startsWith('status:'))?.name.replace('status:', '') || null;
-}
-
-function getPrioritySortValue(issue) {
-  const p = getPriority(issue);
-  return PRIORITY_ORDER[p] ?? 99;
-}
 
 function initTheme() {
   const saved = localStorage.getItem(THEME_KEY) || 'dark';
@@ -78,7 +67,7 @@ function renderHeader() {
           <option value="violet" ${s.theme === 'violet' ? 'selected' : ''}>Violet</option>
         </select>
         <div class="user-info">
-          <img class="user-avatar" src="${s.user?.avatar_url || ''}" alt="">
+          <img class="user-avatar" src="${safeAvatarUrl(s.user?.avatar_url)}" alt="${escapeHtml(s.user?.login || '')}">
           <span>${escapeHtml(s.user?.login || '')}</span>
         </div>
         <button class="small" onclick="window._logout()">Logout</button>
@@ -190,17 +179,7 @@ function renderTable() {
     `;
   }
 
-  const sorted = [...s.filteredIssues].sort((a, b) => {
-    let cmp = 0;
-    switch (s.sortBy) {
-      case 'priority': cmp = getPrioritySortValue(a) - getPrioritySortValue(b); break;
-      case 'created': cmp = new Date(b.created_at) - new Date(a.created_at); break;
-      case 'updated': cmp = new Date(b.updated_at) - new Date(a.updated_at); break;
-      case 'comments': cmp = b.comments - a.comments; break;
-      default: cmp = 0;
-    }
-    return s.sortDir === 'asc' ? -cmp : cmp;
-  });
+  const sorted = sortIssues(s.filteredIssues, s.sortBy, s.sortDir);
 
   const grouped = {};
   for (const issue of sorted) {
@@ -208,10 +187,11 @@ function renderTable() {
     grouped[issue.repo].push(issue);
   }
 
-  const sortArrow = (key) => {
+const sortArrow = (key) => {
     if (s.sortBy !== key) return '<span class="sort-arrow">&#8597;</span>';
     return s.sortDir === 'asc' ? '<span class="sort-arrow">&#8593;</span>' : '<span class="sort-arrow">&#8595;</span>';
   };
+
 
   return html`
     <div class="issues-table-wrapper">
@@ -226,11 +206,11 @@ function renderTable() {
         </colgroup>
         <thead>
           <tr>
-            <th onclick="window._setSort('priority')">Priority ${sortArrow('priority')}</th>
+            <th role="button" tabindex="0" onclick="window._setSort('priority')" onkeydown="if(event.key==='Enter'||event.key===' ')window._setSort('priority')">Priority ${sortArrow('priority')}</th>
             <th>Issue</th>
             <th>Status</th>
             <th>Labels</th>
-            <th onclick="window._setSort('updated')">Updated ${sortArrow('updated')}</th>
+            <th role="button" tabindex="0" onclick="window._setSort('updated')" onkeydown="if(event.key==='Enter'||event.key===' ')window._setSort('updated')">Updated ${sortArrow('updated')}</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -240,29 +220,29 @@ function renderTable() {
             ${issues.map(issue => html`
               <tr>
                 <td>
-                   <span class="priority-badge priority-${getPriority(issue) || 'none'}" onclick="window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[getPriority(issue)] || 'None'}</span>
+                   <span class="priority-badge priority-${priorityClass(issue)}" role="button" tabindex="0" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="window._cyclePriorityFromEl(this)" onkeydown="if(event.key==='Enter'||event.key===' ')window._cyclePriorityFromEl(this)" title="Click to change priority">${escapeHtml(PRIORITY_LABELS[getPriority(issue)] || 'None')}</span>
                 </td>
                 <td class="issue-cell">
-                   <span class="issue-title" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">${escapeHtml(issue.title)}</span>
-                   <a class="issue-gh-link" href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">GitHub</a>
-                   <span class="issue-number">#${issue.number}</span>
+                   <span class="issue-title" role="button" tabindex="0" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="window._openIssueFromEl(this)" onkeydown="if(event.key==='Enter'||event.key===' ')window._openIssueFromEl(this)">${escapeHtml(issue.title)}</span>
+                   <a class="issue-gh-link" href="${safeGitHubUrl(issue.html_url)}" target="_blank" rel="noopener noreferrer" aria-label="Open issue on GitHub" onclick="event.stopPropagation()">GitHub</a>
+                   <span class="issue-number">#${Number(issue.number) || 0}</span>
                 </td>
                 <td>
-                   <span class="status-badge status-${getStatus(issue) || 'todo'}" onclick="window._cycleStatus('${issue.repo_full}', ${issue.number})" title="Click to change status">
-                     ${STATUS_LABELS[getStatus(issue)] || 'To Do'}
+                   <span class="status-badge status-${statusClass(issue)}" role="button" tabindex="0" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="window._cycleStatusFromEl(this)" onkeydown="if(event.key==='Enter'||event.key===' ')window._cycleStatusFromEl(this)" title="Click to change status">
+                     ${escapeHtml(STATUS_LABELS[getStatus(issue)] || 'To Do')}
                    </span>
                 </td>
                  <td>
                    <div class="label-list">
-                     ${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).slice(0, 3).map(l => html`<span class="label-chip" style="border-color:#${l.color}40; color:#${l.color};">${escapeHtml(l.name)}</span>`).join('')}
+                     ${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).slice(0, 3).map(l => html`<span class="label-chip" style="border-color:#${safeLabelColor(l.color)}40; color:#${safeLabelColor(l.color)};">${escapeHtml(l.name)}</span>`).join('')}
                      ${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).length > 3 ? html`<span class="label-chip">+${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).length - 3}</span>` : ''}
                    </div>
                  </td>
                 <td style="white-space:nowrap; font-size:0.8rem; color:var(--text-secondary);">${timeAgo(issue.updated_at)}</td>
                 <td>
                   <div class="issue-actions">
-                    <button class="small" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">View</button>
-                    <button class="small" onclick="window._toggleIssueState('${issue.repo_full}', ${issue.number})">
+                    <button class="small" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="window._openIssueFromEl(this)">View</button>
+                    <button class="small" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="window._toggleIssueStateFromEl(this)">
                       ${issue.state === 'open' ? 'Close' : 'Reopen'}
                     </button>
                   </div>
@@ -293,44 +273,33 @@ function renderCards() {
 
   if (!s.loading && s.filteredIssues.length === 0) return '';
 
-  const sorted = [...s.filteredIssues].sort((a, b) => {
-    let cmp = 0;
-    switch (s.sortBy) {
-      case 'priority': cmp = getPrioritySortValue(a) - getPrioritySortValue(b); break;
-      case 'created': cmp = new Date(b.created_at) - new Date(a.created_at); break;
-      case 'updated': cmp = new Date(b.updated_at) - new Date(a.updated_at); break;
-      case 'repo': cmp = a.repo.localeCompare(b.repo); break;
-      case 'comments': cmp = b.comments - a.comments; break;
-      default: cmp = 0;
-    }
-    return s.sortDir === 'asc' ? -cmp : cmp;
-  });
+  const sorted = sortIssues(s.filteredIssues, s.sortBy, s.sortDir);
 
   return html`
     <div class="issues-cards">
       ${sorted.map(issue => html`
-        <div class="issue-card" onclick="window._openIssue('${issue.repo_full}', ${issue.number})">
+        <div class="issue-card" role="button" tabindex="0" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="window._openIssueFromEl(this)" onkeydown="if(event.key==='Enter'||event.key===' ')window._openIssueFromEl(this)">
           <div class="issue-card-header">
             <div>
-              <div class="issue-card-title">${escapeHtml(issue.title)} <a href="${issue.html_url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size:0.75rem; opacity:0.7;">GitHub</a></div>
+              <div class="issue-card-title">${escapeHtml(issue.title)} <a href="${safeGitHubUrl(issue.html_url)}" target="_blank" rel="noopener noreferrer" aria-label="Open issue on GitHub" onclick="event.stopPropagation()" style="font-size:0.75rem; opacity:0.7;">GitHub</a></div>
               <div class="issue-card-meta">
                 <span class="issue-card-repo">${escapeHtml(issue.repo)}</span>
                 <span>&#183;</span>
-                <span>#${issue.number}</span>
+                <span>#${Number(issue.number) || 0}</span>
                 <span>&#183;</span>
                 <span>${timeAgo(issue.updated_at)}</span>
               </div>
             </div>
-            <span class="priority-badge priority-${getPriority(issue) || 'none'}" onclick="event.stopPropagation(); window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[getPriority(issue)] || 'None'}</span>
+            <span class="priority-badge priority-${priorityClass(issue)}" role="button" tabindex="0" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="event.stopPropagation(); window._cyclePriorityFromEl(this)" onkeydown="if(event.key==='Enter'||event.key===' ')event.stopPropagation(); window._cyclePriorityFromEl(this)" title="Click to change priority">${escapeHtml(PRIORITY_LABELS[getPriority(issue)] || 'None')}</span>
           </div>
           <div class="issue-card-footer">
-            <span class="status-badge status-${getStatus(issue) || 'todo'}" onclick="event.stopPropagation(); window._cycleStatus('${issue.repo_full}', ${issue.number})">
-              ${STATUS_LABELS[getStatus(issue)] || 'To Do'}
+            <span class="status-badge status-${statusClass(issue)}" role="button" tabindex="0" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="event.stopPropagation(); window._cycleStatusFromEl(this)" onkeydown="if(event.key==='Enter'||event.key===' ')event.stopPropagation(); window._cycleStatusFromEl(this)">
+              ${escapeHtml(STATUS_LABELS[getStatus(issue)] || 'To Do')}
             </span>
             <div class="label-list">
-              ${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).slice(0, 4).map(l => html`<span class="label-chip" style="border-color:#${l.color}40; color:#${l.color};">${escapeHtml(l.name)}</span>`).join('')}
+              ${issue.labels.filter(l => !l.name.startsWith('priority:') && !l.name.startsWith('status:')).slice(0, 4).map(l => html`<span class="label-chip" style="border-color:#${safeLabelColor(l.color)}40; color:#${safeLabelColor(l.color)};">${escapeHtml(l.name)}</span>`).join('')}
             </div>
-            <button class="small" onclick="event.stopPropagation(); window._toggleIssueState('${issue.repo_full}', ${issue.number})" style="margin-left:auto;">
+            <button class="small" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="event.stopPropagation(); window._toggleIssueStateFromEl(this)" style="margin-left:auto;">
               ${issue.state === 'open' ? 'Close' : 'Reopen'}
             </button>
           </div>
@@ -353,11 +322,11 @@ function renderIssueModal() {
             <div class="issue-card-meta" style="margin-top:0.5rem;">
               <span style="font-weight:500;">${escapeHtml(issue.repo_full)}</span>
               <span>&#183;</span>
-              <span>#${issue.number}</span>
+              <span>#${Number(issue.number) || 0}</span>
               <span>&#183;</span>
-            <span class="priority-badge priority-${getPriority(issue) || 'none'}" onclick="event.stopPropagation(); window._cyclePriority('${issue.repo_full}', ${issue.number})" title="Click to change priority">${PRIORITY_LABELS[getPriority(issue)] || 'None'}</span>
+            <span class="priority-badge priority-${priorityClass(issue)}" role="button" tabindex="0" data-repo="${escapeHtml(issue.repo_full)}" data-number="${Number(issue.number) || 0}" onclick="event.stopPropagation(); window._cyclePriorityFromEl(this)" onkeydown="if(event.key==='Enter'||event.key===' ')event.stopPropagation(); window._cyclePriorityFromEl(this)" title="Click to change priority">${escapeHtml(PRIORITY_LABELS[getPriority(issue)] || 'None')}</span>
               <span>&#183;</span>
-              <span class="status-badge status-${getStatus(issue) || 'todo'}" onclick="window._cycleStatusFromModal()">${STATUS_LABELS[getStatus(issue)] || 'To Do'}</span>
+              <span class="status-badge status-${statusClass(issue)}" role="button" tabindex="0" onclick="window._cycleStatusFromModal()" onkeydown="if(event.key==='Enter'||event.key===' ')window._cycleStatusFromModal()">${escapeHtml(STATUS_LABELS[getStatus(issue)] || 'To Do')}</span>
             </div>
           </div>
           <button class="modal-close" onclick="window._closeIssue()">&times;</button>
@@ -551,7 +520,12 @@ async function loadAllIssues() {
     setState({ repos: uniqueRepos, user });
 
     const issues = [];
+    let rateLimited = false;
     for (const repo of uniqueRepos) {
+      if (rateLimitExhausted()) {
+        rateLimited = true;
+        break;
+      }
       try {
         const [openIssues, closedIssues] = await Promise.all([
           getIssues(repo.owner.login, repo.name, 'open').catch(() => []),
@@ -566,7 +540,8 @@ async function loadAllIssues() {
     const formatted = issues.map(formatIssueForDisplay);
     setState({ issues: formatted });
     filterIssues();
-    showToast(`Loaded ${formatted.length} issues`, 'success');
+    if (rateLimited) showToast('GitHub rate limit reached — showing partial results', 'error');
+    else showToast(`Loaded ${formatted.length} issues`, 'success');
   } catch (e) {
     setState({ error: e.message });
     showToast(e.message, 'error');
@@ -592,9 +567,7 @@ export function logout() {
 
 async function openIssue(repo, number) {
   try {
-    const issue = await fetch(`https://api.github.com/repos/${repo}/issues/${number}`, {
-      headers: { 'Accept': 'application/vnd.github+json', 'Authorization': `Bearer ${getToken()}`, 'X-GitHub-Api-Version': '2022-11-28' },
-    }).then(r => r.json());
+    const issue = await getIssue(repo.split('/')[0], repo.split('/')[1], number);
     const formatted = formatIssueForDisplay(issue);
     formatted.comments_count = issue.comments;
     setState({ selectedIssue: formatted });
@@ -617,7 +590,7 @@ async function loadComments(repo, number) {
     el.innerHTML = comments.map(c => html`
       <div class="comment">
         <div class="comment-header">
-          <img src="${c.user.avatar_url}" style="width:20px; height:20px; border-radius:50%;" alt="">
+          <img src="${safeAvatarUrl(c.user.avatar_url)}" style="width:20px; height:20px; border-radius:50%;" alt="${escapeHtml(c.user.login)}">
           <span class="comment-author">${escapeHtml(c.user.login)}</span>
           <span class="comment-date">${formatDate(c.created_at)}</span>
         </div>
@@ -822,6 +795,7 @@ export function importLayout(fileInput) {
 }
 
 function setupGlobals() {
+  const issueOf = (el) => [el.dataset.repo, Number(el.dataset.number)];
   window._setTheme = (t) => { setState({ theme: t }); applyTheme(t); persistTheme(); };
   window._logout = logout;
   window._patLogin = () => {
@@ -867,6 +841,13 @@ function setupGlobals() {
   window._exportLayout = exportLayout;
   window._importLayout = importLayout;
   window._dismissError = () => setState({ error: null });
+
+  // Handlers read the issue off data-* so no remote string is ever interpolated into
+  // the JS-string context of an inline onclick.
+  window._openIssueFromEl = (el) => openIssue(...issueOf(el));
+  window._toggleIssueStateFromEl = (el) => toggleIssueState(...issueOf(el));
+  window._cyclePriorityFromEl = (el) => cycleIssuePriority(...issueOf(el));
+  window._cycleStatusFromEl = (el) => cycleStatus(...issueOf(el));
 }
 
 function initCustomSelects() {
@@ -939,7 +920,18 @@ function updateTriggerTexts() {
   });
 }
 
+function setupGlobalErrorHandlers() {
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error('[issuez] Unhandled promise rejection — a background API call failed and nothing surfaced it.', e.reason);
+    if (toastContainer) showToast(e.reason?.message || 'Something went wrong', 'error');
+  });
+  window.addEventListener('error', (e) => {
+    console.error('[issuez] Uncaught error', e.error || e.message);
+  });
+}
+
 async function boot() {
+  setupGlobalErrorHandlers();
   initTheme();
   loadPersisted();
   applyTheme(getState().theme);
@@ -965,4 +957,3 @@ if (document.readyState === 'loading') {
 } else {
   boot();
 }
-// BUILD_TEST_MARKER_XYZ789

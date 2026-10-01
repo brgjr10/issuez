@@ -6,8 +6,14 @@
   <title>Issuez — Cross-Repo GitHub Issue Tracker</title>
   <meta name="description" content="Aggregate and manage all your GitHub issues across repositories in one place.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="src/styles.css">
-  <style id="theme-styles"></style>
+  <!-- GitHub Pages serves this app statically and cannot set response headers, so the
+       policy travels in the document. frame-ancestors is ignored in a meta CSP and must
+       be set by the host as X-Frame-Options: DENY to block framing. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
 </head>
 <body>
   <div id="app"></div>
