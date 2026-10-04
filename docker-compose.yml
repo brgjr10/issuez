@@ -1,0 +1,16 @@
+services:
+  issuez:
+    build: .
+    image: issuez:latest
+    container_name: issuez
+    restart: unless-stopped
+    # Static site on port 80 inside the image; host port is configurable so it
+    # can sit behind Nginx Proxy Manager without colliding with anything.
+    ports:
+      - "${ISSUEZ_PORT:-2020}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

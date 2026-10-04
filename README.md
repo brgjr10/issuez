@@ -25,6 +25,37 @@
 2. Click **Connect with PAT** and paste your token
 3. Browse, search, filter, and manage your issues
 
+## Run with Docker
+
+The production build is a static single-file bundle, so the container is nginx serving `dist/` and nothing else. The image builds the bundle in a Node stage and ships only nginx at runtime — no Node and no backend process in the final image.
+
+```bash
+docker compose up -d --build     # http://localhost:2020
+```
+
+If 2020 is taken, override the host port:
+
+```bash
+ISSUEZ_PORT=9090 docker compose up -d --build
+```
+
+Without Compose:
+
+```bash
+docker build -t issuez .
+docker run -d --name issuez -p 2020:80 issuez
+```
+
+The container holds no state — your PAT and layout live in the browser — so there is no volume to mount and rebuilding loses nothing. `GET /healthz` returns `ok` and backs the image healthcheck.
+
+| Path | Purpose |
+|------|---------|
+| `Dockerfile` | Node build stage → nginx runtime stage |
+| `docker/nginx.conf` | Static server, response headers, `/healthz` |
+| `docker-compose.yml` | Build + run with `${ISSUEZ_PORT:-2020}` on the host |
+
+npm is still the development workflow — use it for `npm run dev` and `npm test`; use the container to run the app.
+
 ## Authentication
 
 Issuez runs entirely client-side, so it uses a **Personal Access Token (PAT)** instead of OAuth. GitHub’s OAuth `access_token` endpoint blocks browser requests via CORS, so a backend would be required for OAuth.
@@ -76,7 +107,16 @@ No backend, no server setup, no data storage — just your layout and themes app
 
 ### Single-File Build
 
-The production build bundles all CSS and JavaScript into a single `dist/index.html` file using `vite-plugin-singlefile`. This makes deployment to GitHub Pages trivial — just enable Pages and point it at the `dist` folder.
+The production build bundles all CSS and JavaScript into a single `dist/index.html` file using `vite-plugin-singlefile`. This makes deployment to GitHub Pages trivial — just enable Pages and point it at the `dist` folder, and it makes the container trivial: there is one document to serve and a handful of static assets beside it.
+
+### Container Image
+
+Two stages, no shared state:
+
+1. **build** (`node:22-alpine`) — `npm ci`, then `npm run build`. Only `index.html`, `vite.config.js`, `src/`, and `assets/` are copied in, so the dependency layer stays cached across code edits and the context stays small.
+2. **serve** (`nginx:stable-alpine`) — copies `dist/` plus `docker/nginx.conf`. Node, `node_modules/`, and the toolchain are not in the runtime image.
+
+`docker/nginx.conf` replaces the stock config to add what a static host cannot: the framing and MIME-sniffing headers described in [Security](#security), an explicit `application/manifest+json` type for `.webmanifest` (nginx's `mime.types` has no entry for it, and Chrome rejects the manifest otherwise), gzip, and a `/healthz` endpoint.
 
 ### Development
 
@@ -131,7 +171,7 @@ The app uses the GitHub REST API v3:
 - **No cookies, no localStorage for tokens** — Only layout preferences and theme are stored locally
 - **Direct GitHub API** — All requests go directly to GitHub; no proxy or intermediary
 - **Revocable access** — You can revoke your PAT at any time from GitHub Settings → Applications
-- **Content-Security-Policy** — Shipped in `index.html` because a static host cannot set response headers. GitHub Pages also cannot set `X-Frame-Options`, so if you deploy somewhere else (or in front of Pages) add `X-Frame-Options: DENY` and `X-Content-Type-Options: nosniff` at the edge; browsers ignore `frame-ancestors` when the policy is delivered in a `<meta>` tag.
+- **Content-Security-Policy** — Shipped in `index.html` because a static host cannot set response headers. GitHub Pages also cannot set `X-Frame-Options`, so if you deploy somewhere else (or in front of Pages) add `X-Frame-Options: DENY` and `X-Content-Type-Options: nosniff` at the edge; browsers ignore `frame-ancestors` when the policy is delivered in a `<meta>` tag. The Docker image already does this — `docker/nginx.conf` sets `X-Frame-Options`, `X-Content-Type-Options`, and a `frame-ancestors 'none'` policy as real response headers, which combine with the `<meta>` policy rather than replacing it.
 
 ## Roadmap
 
