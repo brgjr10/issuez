@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { viteSingleFile } from 'vite-plugin-singlefile';
 
 export default defineConfig({
   root: '.',
@@ -16,12 +15,6 @@ export default defineConfig({
       },
     },
   },
-  plugins: [
-    viteSingleFile({
-      removeViteModuleLoader: false,
-      deleteInlinedFiles: false,
-    }),
-  ],
   server: {
     port: 3000,
     open: true,
