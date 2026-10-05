@@ -104,3 +104,22 @@ describe('ISSUEZ-002 — the build needs no post-processing', () => {
     expect(existsSync(join(ROOT, 'dist', manifest.icons[0].src))).toBe(true);
   });
 });
+
+describe('ISSUEZ-015 — a service worker ships with the manifest', () => {
+  it('the source sw.js exists and is copied into dist', () => {
+    expect(existsSync(join(ROOT, 'assets', 'sw.js'))).toBe(true);
+    expect(existsSync(join(ROOT, 'dist', 'sw.js'))).toBe(true);
+  });
+
+  it('the built index.html registers the service worker', () => {
+    expect(dist).toContain('serviceWorker.register');
+    expect(dist).toContain('sw.js');
+  });
+
+  it('sw.js precaches the app shell', () => {
+    const sw = readFileSync(join(ROOT, 'assets', 'sw.js'), 'utf-8');
+    expect(sw).toContain("self.addEventListener('install'");
+    expect(sw).toContain("caches.open");
+    expect(sw).toContain("self.addEventListener('fetch'");
+  });
+});

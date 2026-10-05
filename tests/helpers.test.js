@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   sortIssues, priorityClass, statusClass, getPriority, getStatus,
-  safeGitHubUrl, safeAvatarUrl, safeLabelColor, escapeHtml, PRIORITY_ORDER,
+  safeGitHubUrl, safeAvatarUrl, safeLabelColor, escapeHtml, PRIORITY_ORDER, timeAgo,
 } from '../src/utils/helpers.js';
 
 const issue = (over = {}) => ({
@@ -143,6 +143,50 @@ describe('URL and colour guards (ISSUEZ-005)', () => {
     expect(safeLabelColor('red; background:url(https://evil.example/x)')).toBe('808080');
     expect(safeLabelColor('')).toBe('808080');
     expect(safeLabelColor('fff')).toBe('808080');
+  });
+});
+
+// ISSUEZ-009: the JS allow-list and the document CSP have to agree, otherwise an
+// avatar that passes the guard is blocked by the browser (or, the other way round, the
+// document grants a host the code never uses). tests/security-config.test.js asserts the
+// two lists are actually equal; these are the values that list is built from.
+describe('safeAvatarUrl hosts (ISSUEZ-009)', () => {
+  it('permits exactly the image hosts the CSP lists, and nothing else', () => {
+    expect(safeAvatarUrl('https://avatars.githubusercontent.com/u/1')).toBe('https://avatars.githubusercontent.com/u/1');
+    expect(safeAvatarUrl('https://camo.githubusercontent.com/abc')).toBe('https://camo.githubusercontent.com/abc');
+  });
+
+  it('drops github.com, which serves documents rather than images', () => {
+    expect(safeAvatarUrl('https://github.com/identicons/o')).toBe('');
+  });
+
+  it('still rejects other hosts and non-https schemes', () => {
+    expect(safeAvatarUrl('https://github.githubusercontent.com/u/1')).toBe('');
+    expect(safeAvatarUrl('http://avatars.githubusercontent.com/u/1')).toBe('');
+    expect(safeAvatarUrl('//avatars.githubusercontent.com/u/1')).toBe('');
+    expect(safeAvatarUrl('data:image/png;base64,AAAA')).toBe('');
+  });
+});
+
+// ISSUEZ-012: a client clock behind GitHub's produced "-42s ago" for future timestamps.
+describe('timeAgo (ISSUEZ-012)', () => {
+  const iso = (ms) => new Date(Date.now() + ms).toISOString();
+
+  it('never renders a negative duration for a future timestamp', () => {
+    for (const skew of [1000, 60_000, 3_600_000, 86_400_000 * 30]) {
+      expect(timeAgo(iso(skew)), `${skew}ms in the future`).toMatch(/^(0s|\d+m|\d+h|\d+d) ago$/);
+    }
+  });
+
+  it('clamps a slightly future timestamp to zero seconds, not to a negative number', () => {
+    expect(timeAgo(iso(42_000))).toBe('0s ago');
+  });
+
+  it('still counts backwards correctly for past timestamps', () => {
+    expect(timeAgo(iso(-30_000))).toBe('30s ago');
+    expect(timeAgo(iso(-5 * 60_000))).toBe('5m ago');
+    expect(timeAgo(iso(-3 * 3_600_000))).toBe('3h ago');
+    expect(timeAgo(iso(-2 * 86_400_000))).toBe('2d ago');
   });
 });
 

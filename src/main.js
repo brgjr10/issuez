@@ -14,6 +14,23 @@ import { getState, setState, subscribe, loadPersisted, persistLayout, persistThe
 
 let toastContainer = null;
 
+// Toasts live on <body>, not inside the re-rendered app tree: while the container was
+// inside it, any state change (a background refresh, a sort toggle) destroyed the toast
+// before its 4s timer ran.
+function ensureToastContainer() {
+  if (toastContainer && toastContainer.isConnected) return toastContainer;
+  const existing = $('#toast-container');
+  if (existing) {
+    toastContainer = existing;
+    return toastContainer;
+  }
+  toastContainer = document.createElement('div');
+  toastContainer.className = 'toast-container';
+  toastContainer.id = 'toast-container';
+  document.body.appendChild(toastContainer);
+  return toastContainer;
+}
+
 function initTheme() {
   const saved = localStorage.getItem(THEME_KEY) || 'dark';
   setState({ theme: saved });
@@ -29,7 +46,7 @@ function showToast(message, type = 'info') {
   el.className = `toast ${type}`;
   el.innerHTML = `<div class="toast-message">${escapeHtml(message)}</div>
     <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>`;
-  toastContainer.appendChild(el);
+  ensureToastContainer().appendChild(el);
   setTimeout(() => el.remove(), 4000);
 }
 
@@ -81,7 +98,7 @@ function renderAuth() {
     <div class="auth-screen">
       <div class="auth-card fade-in">
         <h1>Issuez</h1>
-        <p>Cross-repo GitHub issue tracker. No server, no storage � just you and GitHub.</p>
+        <p>Cross-repo GitHub issue tracker. No server, no storage — just you and GitHub.</p>
         <div style="text-align:left; margin-bottom:1rem;">
           <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">
             <strong>How to get a PAT:</strong>
@@ -93,12 +110,13 @@ function renderAuth() {
             <li>Copy the token and paste it below</li>
           </ol>
         </div>
-        <div class="auth-methods">
-          <input type="password" id="pat-input" placeholder="ghp_..." style="margin-bottom:0.5rem;">
-          <button class="primary" style="width:100%;" onclick="window._patLogin()">Connect with PAT</button>
-        </div>
+        <form class="auth-methods" onsubmit="event.preventDefault(); window._patLogin()">
+          <label class="visually-hidden" for="pat-input">Personal Access Token</label>
+          <input type="password" id="pat-input" name="pat" placeholder="ghp_..." autocomplete="off" spellcheck="false" style="margin-bottom:0.5rem;">
+          <button class="primary" type="submit" style="width:100%;">Connect with PAT</button>
+        </form>
         <p style="margin-top:1rem; font-size:0.8rem; color:var(--text-muted);">
-          Your token stays in memory only. It is never stored or sent anywhere except GitHub.
+          Your token is kept in this tab's sessionStorage and is sent only to GitHub. It is never written to localStorage or cookies, and is discarded when the tab closes or you log out.
         </p>
       </div>
     </div>
@@ -112,10 +130,10 @@ function renderToolbar() {
       <div class="toolbar-left">
         <div class="search-box">
           <span class="search-icon">&#128269;</span>
-          <input type="text" id="search-input" placeholder="Search issues..." value="${escapeHtml(s.searchQuery)}" oninput="window._onSearch(this.value)">
+          <input type="text" id="search-input" aria-label="Search issues by title or body" placeholder="Search issues..." oninput="window._onSearch(this.value)">
         </div>
         <div class="filter-group">
-          <label>State</label>
+          <label for="filter-state">State</label>
           <select id="filter-state" onchange="window._setFilter('state', this.value)">
             <option value="all" ${s.filterState === 'all' ? 'selected' : ''}>All</option>
             <option value="open" ${s.filterState === 'open' ? 'selected' : ''}>Open</option>
@@ -123,7 +141,7 @@ function renderToolbar() {
           </select>
         </div>
         <div class="filter-group">
-          <label>Assignee</label>
+          <label for="filter-assignee">Assignee</label>
           <select id="filter-assignee" onchange="window._setFilter('assignee', this.value)">
             <option value="all" ${s.filterAssignee === 'all' ? 'selected' : ''}>All</option>
             <option value="me" ${s.filterAssignee === 'me' ? 'selected' : ''}>Assigned to me</option>
@@ -315,10 +333,10 @@ function renderIssueModal() {
   const issue = s.selectedIssue;
   return html`
     <div class="modal-overlay" onclick="if(event.target===this)window._closeIssue()">
-      <div class="modal">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="issue-modal-title">
         <div class="modal-header">
           <div>
-            <h2>${escapeHtml(issue.title)}</h2>
+            <h2 id="issue-modal-title">${escapeHtml(issue.title)}</h2>
             <div class="issue-card-meta" style="margin-top:0.5rem;">
               <span style="font-weight:500;">${escapeHtml(issue.repo_full)}</span>
               <span>&#183;</span>
@@ -361,6 +379,7 @@ function renderIssueModal() {
               <div class="loading-spinner"></div>
             </div>
             <div class="comment-form">
+              <label class="visually-hidden" for="comment-input">Add a comment</label>
               <textarea id="comment-input" placeholder="Add a comment..."></textarea>
               <button class="primary" onclick="window._submitComment()">Post</button>
             </div>
@@ -375,9 +394,9 @@ function renderSettings() {
   const s = getState();
   return html`
     <div class="modal-overlay" onclick="if(event.target===this)window._closeSettings()">
-      <div class="modal" style="max-width:640px;">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" style="max-width:640px;">
         <div class="modal-header">
-          <h2>Settings</h2>
+          <h2 id="settings-modal-title">Settings</h2>
           <button class="modal-close" onclick="window._closeSettings()">&times;</button>
         </div>
         <div class="modal-body">
@@ -413,11 +432,12 @@ function renderSettings() {
             <div class="settings-card">
               <h3>&#128194; Import Layout</h3>
               <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.5rem;">Upload a previously exported layout file.</p>
+              <label class="visually-hidden" for="import-file">Layout JSON file</label>
               <input type="file" id="import-file" accept=".json" onchange="window._importLayout(this)">
             </div>
             <div class="settings-card">
               <h3>&#128275; Security</h3>
-              <p style="font-size:0.85rem; color:var(--text-secondary);">No data is stored on any server. Your token lives in memory only and is discarded on logout.</p>
+              <p style="font-size:0.85rem; color:var(--text-secondary);">No data is stored on any server. Your token lives in this tab's sessionStorage and is discarded when the tab closes or you log out.</p>
             </div>
           </div>
         </div>
@@ -429,9 +449,9 @@ function renderSettings() {
 function renderWelcome() {
   return html`
     <div class="modal-overlay" onclick="if(event.target===this)window._closeWelcome()">
-      <div class="modal" style="max-width:520px; text-align:center;">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="welcome-modal-title" style="max-width:520px; text-align:center;">
         <div class="modal-header" style="justify-content:center; border-bottom:none;">
-          <h2 style="font-size:1.5rem;">Welcome to Issuez</h2>
+          <h2 id="welcome-modal-title" style="font-size:1.5rem;">Welcome to Issuez</h2>
         </div>
         <div class="modal-body">
           <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.95rem;">
@@ -460,33 +480,80 @@ function renderError() {
   `;
 }
 
+// ---- keyed rendering --------------------------------------------------------
+// The app used to be re-serialised into app.innerHTML on every setState, which threw
+// away the focused search box, any half-typed comment and any live toast. Each region
+// now owns a stable host element and is only re-serialised when the markup it would
+// produce actually changes, so unrelated state changes leave those nodes alone.
+const regionMarkup = new Map();
+
+function ensureRegionSkeleton(app) {
+  if ($('#region-header', app)) return;
+  app.innerHTML = html`
+    <div id="region-header"></div>
+    <main class="app-main">
+      <div id="region-error"></div>
+      <div id="region-stats"></div>
+      <div id="region-toolbar"></div>
+      <div id="region-issues"></div>
+      <div id="region-cards"></div>
+    </main>
+    <div id="region-modal"></div>
+    <div id="region-settings"></div>
+    <div id="region-welcome"></div>
+  `;
+  regionMarkup.clear();
+}
+
 function render() {
   const s = getState();
   const app = $('#app');
   if (!app) return;
 
+  const previouslyFocused = document.activeElement;
+
   if (!isAuthed()) {
     app.innerHTML = renderAuth();
+    regionMarkup.clear();
+    syncDialogFocus(null);
     return;
   }
 
-  app.innerHTML = html`
-    ${renderHeader()}
-    <main class="app-main">
-      ${renderError()}
-      ${renderStats()}
-      ${renderToolbar()}
-      ${renderTable()}
-      ${renderCards()}
-    </main>
-    ${renderIssueModal()}
-    ${s.showSettings ? renderSettings() : ''}
-    ${s.showWelcome ? renderWelcome() : ''}
-    <div class="toast-container" id="toast-container"></div>
-  `;
+  ensureRegionSkeleton(app);
 
-  toastContainer = $('#toast-container');
+  const regions = [
+    ['region-header', renderHeader],
+    ['region-error', renderError],
+    ['region-stats', renderStats],
+    // renderToolbar is deliberately free of the search query, so typing rebuilds the
+    // table but never the input the user is typing into.
+    ['region-toolbar', renderToolbar],
+    ['region-issues', renderTable],
+    ['region-cards', renderCards],
+    ['region-modal', renderIssueModal],
+    ['region-settings', () => s.showSettings ? renderSettings() : ''],
+    ['region-welcome', () => s.showWelcome ? renderWelcome() : ''],
+  ];
+
+  for (const [id, renderRegion] of regions) {
+    const markup = renderRegion();
+    if (regionMarkup.get(id) === markup) continue;
+    regionMarkup.set(id, markup);
+    const host = document.getElementById(id);
+    if (host) host.innerHTML = markup;
+  }
+
+  syncSearchInput();
+  syncDialogFocus(previouslyFocused);
+  ensureToastContainer();
   initCustomSelects();
+}
+
+// The search box is live state rather than markup: writing value back on every render
+// would reset the caret, so it is only written when state and DOM have diverged.
+function syncSearchInput() {
+  const input = $('#search-input');
+  if (input && input.value !== getState().searchQuery) input.value = getState().searchQuery;
 }
 
 function filterIssues() {
@@ -503,15 +570,24 @@ function filterIssues() {
 
 async function loadAllIssues() {
   setState({ loading: true, error: null });
+  // Each source is fetched independently so one bad endpoint cannot empty the whole
+  // dashboard, but every failure is logged and counted: a PAT without read:org or a
+  // transient 5xx used to disappear silently and leave a plausible but incomplete list.
+  const failures = [];
+  const keepGoing = (what, e) => {
+    console.warn(`[issuez] Could not ${what}. That source is missing from this dashboard — check the token scopes (repo, read:org), then refresh.`, e);
+    failures.push(what);
+    return [];
+  };
   try {
     const user = await getCurrentUser();
     const [userRepos, orgs] = await Promise.all([
       getUserRepos(),
-      getUserOrgs().catch(() => []),
+      getUserOrgs().catch(e => keepGoing('list your organizations', e)),
     ]);
 
     const orgRepos = await Promise.all(
-      orgs.map(o => getOrgRepos(o.login).catch(() => []))
+      orgs.map(o => getOrgRepos(o.login).catch(e => keepGoing(`list repositories for ${o.login}`, e)))
     );
 
     const allRepos = [...userRepos, ...orgRepos.flat()];
@@ -526,21 +602,18 @@ async function loadAllIssues() {
         rateLimited = true;
         break;
       }
-      try {
-        const [openIssues, closedIssues] = await Promise.all([
-          getIssues(repo.owner.login, repo.name, 'open').catch(() => []),
-          getIssues(repo.owner.login, repo.name, 'closed').catch(() => []),
-        ]);
-        issues.push(...openIssues, ...closedIssues);
-      } catch (e) {
-        console.warn('Failed to load issues for', repo.full_name, e);
-      }
+      const [openIssues, closedIssues] = await Promise.all([
+        getIssues(repo.owner.login, repo.name, 'open').catch(e => keepGoing(`load open issues for ${repo.full_name}`, e)),
+        getIssues(repo.owner.login, repo.name, 'closed').catch(e => keepGoing(`load closed issues for ${repo.full_name}`, e)),
+      ]);
+      issues.push(...openIssues, ...closedIssues);
     }
 
     const formatted = issues.map(formatIssueForDisplay);
     setState({ issues: formatted });
     filterIssues();
-    if (rateLimited) showToast('GitHub rate limit reached � showing partial results', 'error');
+    if (rateLimited) showToast('GitHub rate limit reached — showing partial results', 'error');
+    else if (failures.length) showToast(`${failures.length} source${failures.length === 1 ? '' : 's'} failed to load — showing partial results`, 'error');
     else showToast(`Loaded ${formatted.length} issues`, 'success');
   } catch (e) {
     setState({ error: e.message });
@@ -561,7 +634,9 @@ export async function patLogin(pat) {
 export function logout() {
   setToken(null);
   sessionStorage.removeItem(STORAGE_KEY);
-  setState({ user: null, issues: [], filteredIssues: [], selectedIssue: null, error: null, showWelcome: false });
+  // repos and loading were left populated, so a logout during an in-flight refresh
+  // kept the previous account's repo list alive in state until the next login.
+  setState({ user: null, issues: [], filteredIssues: [], repos: [], loading: false, selectedIssue: null, error: null, showWelcome: false, showSettings: false });
   render();
 }
 
@@ -751,11 +826,30 @@ async function setStatusFromModal(status) {
 }
 
 export function openSettings() {
+  dialogOpener = document.activeElement;
   setState({ showSettings: true });
 }
 
 export function closeSettings() {
   setState({ showSettings: false });
+}
+
+// Layout preferences are advertised as living in localStorage, so every change that
+// moves the layout has to write them back — persistLayout() shipped with zero callers.
+function persistLayoutState() {
+  const s = getState();
+  setState({ layout: { theme: s.theme, sortBy: s.sortBy, sortDir: s.sortDir } });
+  persistLayout();
+}
+
+export function applyPersistedLayout() {
+  const { layout } = getState();
+  if (layout && typeof layout === 'object') {
+    const patch = {};
+    if (layout.sortBy) patch.sortBy = layout.sortBy;
+    if (layout.sortDir) patch.sortDir = layout.sortDir;
+    if (Object.keys(patch).length) setState(patch);
+  }
 }
 
 export function exportLayout() {
@@ -773,7 +867,7 @@ export function exportLayout() {
   a.href = url;
   a.download = 'issuez-layout.json';
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
   showToast('Layout exported', 'success');
 }
 
@@ -786,6 +880,7 @@ export function importLayout(fileInput) {
       const layout = JSON.parse(e.target.result);
       if (layout.theme) { setState({ theme: layout.theme }); applyTheme(layout.theme); persistTheme(); }
       if (layout.sortBy) setState({ sortBy: layout.sortBy, sortDir: layout.sortDir || 'asc' });
+      persistLayoutState();
       showToast('Layout imported', 'success');
     } catch {
       showToast('Invalid layout file', 'error');
@@ -814,21 +909,23 @@ function setupGlobals() {
     if (s.sortBy === key) setState({ sortDir: s.sortDir === 'asc' ? 'desc' : 'asc' });
     else setState({ sortBy: key, sortDir: 'asc' });
     filterIssues();
+    persistLayoutState();
     render();
   };
   window._refresh = async () => { await loadAllIssues(); };
-  window._openIssue = openIssue;
   window._closeIssue = () => { setState({ selectedIssue: null }); render(); };
   window._openSettings = openSettings;
   window._closeSettings = closeSettings;
   window._closeWelcome = () => { setState({ showWelcome: false }); render(); };
-  window._toggleIssueState = toggleIssueState;
   window._toggleIssueStateFromModal = () => {
     const issue = getState().selectedIssue;
     if (!issue) return;
     toggleIssueState(issue.repo_full, issue.number);
   };
-  window._cycleStatus = cycleStatus;
+  // window._cyclePriority is kept although nothing in the DOM calls it: the build
+  // pipeline test asserts the bundle still contains "window._cyclePriority=", which is
+  // how it detects a build that lost cycleIssuePriority. Dropping it needs that test
+  // re-pointed at a symbol that is actually live first.
   window._cyclePriority = cycleIssuePriority;
   window._cycleStatusFromModal = () => {
     const issue = getState().selectedIssue;
@@ -844,7 +941,7 @@ function setupGlobals() {
 
   // Handlers read the issue off data-* so no remote string is ever interpolated into
   // the JS-string context of an inline onclick.
-  window._openIssueFromEl = (el) => openIssue(...issueOf(el));
+  window._openIssueFromEl = (el) => { dialogOpener = el; openIssue(...issueOf(el)); };
   window._toggleIssueStateFromEl = (el) => toggleIssueState(...issueOf(el));
   window._cyclePriorityFromEl = (el) => cycleIssuePriority(...issueOf(el));
   window._cycleStatusFromEl = (el) => cycleStatus(...issueOf(el));
@@ -852,12 +949,24 @@ function setupGlobals() {
 
 function initCustomSelects() {
   document.querySelectorAll('select').forEach(select => {
+    // Region rendering no longer rebuilds the whole tree, so a select can be offered
+    // twice; the wrapper is the marker and this keeps the widget idempotent.
+    if (select.closest('.select-wrapper')) return;
+
     const wrapper = document.createElement('div');
     wrapper.className = 'select-wrapper';
 
     const trigger = document.createElement('button');
     trigger.type = 'button';
     trigger.className = 'select-trigger';
+    trigger.id = `${select.id || 'select'}-trigger`;
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', `${trigger.id}-listbox`);
+    // The native select is display:none, so its accessible name has to be carried over
+    // or the replacement button announces itself as an unlabelled combo box.
+    const label = select.labels?.[0] || select.closest('.filter-group, .settings-card, div')?.querySelector('label');
+    if (label) trigger.setAttribute('aria-label', label.textContent.trim());
 
     const valueSpan = document.createElement('span');
     valueSpan.className = 'select-value';
@@ -867,39 +976,104 @@ function initCustomSelects() {
 
     const dropdown = document.createElement('div');
     dropdown.className = 'select-dropdown';
+    dropdown.id = `${trigger.id}-listbox`;
+    dropdown.setAttribute('role', 'listbox');
+    dropdown.setAttribute('aria-labelledby', trigger.id);
 
-    Array.from(select.options).forEach(option => {
+    const options = Array.from(select.options).map(option => {
       const optEl = document.createElement('div');
       optEl.className = 'select-option' + (option.selected ? ' selected' : '');
       optEl.textContent = option.textContent;
       optEl.dataset.value = option.value;
+      optEl.setAttribute('role', 'option');
+      optEl.setAttribute('aria-selected', option.selected ? 'true' : 'false');
+      // Roving tabindex: exactly one option is in the tab order, the rest are reached
+      // with the arrow keys, which is what a native select does.
+      optEl.tabIndex = option.selected ? 0 : -1;
       optEl.addEventListener('click', () => {
-        select.value = option.value;
-        select.dispatchEvent(new Event('change'));
-        closeAllSelects();
-        updateTriggerTexts();
+        selectOption(select, option.value);
       });
       dropdown.appendChild(optEl);
+      return optEl;
     });
 
     wrapper.appendChild(trigger);
     wrapper.appendChild(dropdown);
     select.parentNode.insertBefore(wrapper, select);
+    // The source select moves inside its widget: updateTriggerTexts() reads the
+    // selection through wrapper.querySelector('select'), and as a sibling that lookup
+    // always missed, so the trigger text and aria-selected never followed the choice.
+    wrapper.appendChild(select);
     select.style.display = 'none';
+
+    const openSelect = (focusIndex) => {
+      closeAllSelects();
+      wrapper.classList.add('open');
+      trigger.setAttribute('aria-expanded', 'true');
+      const target = Number.isInteger(focusIndex) ? options[focusIndex] : options.find(o => o.dataset.value === select.value) || options[0];
+      options.forEach(o => { o.tabIndex = -1; });
+      if (target) {
+        target.tabIndex = 0;
+        target.focus();
+      }
+    };
+
+    const closeSelect = (returnFocus) => {
+      wrapper.classList.remove('open');
+      trigger.setAttribute('aria-expanded', 'false');
+      if (returnFocus) trigger.focus();
+    };
+
+    const focusOptionAt = (index) => {
+      const clamped = Math.max(0, Math.min(options.length - 1, index));
+      options.forEach(o => { o.tabIndex = -1; });
+      options[clamped].tabIndex = 0;
+      options[clamped].focus();
+    };
 
     trigger.addEventListener('click', (e) => {
       e.stopPropagation();
-      const isOpen = wrapper.classList.contains('open');
-      closeAllSelects();
-      if (!isOpen) {
-        wrapper.classList.add('open');
-      }
+      if (wrapper.classList.contains('open')) closeSelect(false);
+      else openSelect();
+    });
+
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); openSelect(); }
+      else if (e.key === 'Escape' && wrapper.classList.contains('open')) { e.preventDefault(); closeSelect(true); }
+      else if (e.key === 'Tab') closeSelect(false);
+    });
+
+    dropdown.addEventListener('keydown', (e) => {
+      const current = options.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); focusOptionAt(current + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); focusOptionAt(current <= 0 ? options.length - 1 : current - 1); }
+      else if (e.key === 'Home') { e.preventDefault(); focusOptionAt(0); }
+      else if (e.key === 'End') { e.preventDefault(); focusOptionAt(options.length - 1); }
+      else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const option = options[current];
+        if (option) selectOption(select, option.dataset.value, true);
+      } else if (e.key === 'Escape') { e.preventDefault(); closeSelect(true); }
+      else if (e.key === 'Tab') closeSelect(false);
     });
   });
 }
 
+function selectOption(select, value, keepFocusOnTrigger = false) {
+  select.value = value;
+  // The change handler re-renders the toolbar, which detaches this select and its
+  // wrapper, so anything below has to go back to the document for the live nodes.
+  select.dispatchEvent(new Event('change'));
+  closeAllSelects();
+  updateTriggerTexts();
+  if (keepFocusOnTrigger) document.getElementById(`${select.id}-trigger`)?.focus();
+}
+
 function closeAllSelects() {
-  document.querySelectorAll('.select-wrapper.open').forEach(w => w.classList.remove('open'));
+  document.querySelectorAll('.select-wrapper.open').forEach(w => {
+    w.classList.remove('open');
+    w.querySelector('.select-trigger')?.setAttribute('aria-expanded', 'false');
+  });
 }
 
 function updateTriggerTexts() {
@@ -908,13 +1082,12 @@ function updateTriggerTexts() {
     const valueSpan = wrapper.querySelector('.select-value');
     if (select && valueSpan) {
       valueSpan.textContent = select.options[select.selectedIndex]?.textContent || '';
-      const selectedOpt = wrapper.querySelector('.select-option.selected');
-      if (selectedOpt) selectedOpt.classList.remove('selected');
       const options = wrapper.querySelectorAll('.select-option');
       options.forEach(opt => {
-        if (opt.dataset.value === select.value) {
-          opt.classList.add('selected');
-        }
+        const isSelected = opt.dataset.value === select.value;
+        opt.classList.toggle('selected', isSelected);
+        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        opt.tabIndex = isSelected ? 0 : -1;
       });
     }
   });
@@ -922,12 +1095,95 @@ function updateTriggerTexts() {
 
 function setupGlobalErrorHandlers() {
   window.addEventListener('unhandledrejection', (e) => {
-    console.error('[issuez] Unhandled promise rejection � a background API call failed and nothing surfaced it.', e.reason);
-    if (toastContainer) showToast(e.reason?.message || 'Something went wrong', 'error');
+    console.error('[issuez] Unhandled promise rejection — a background API call failed and nothing surfaced it.', e.reason);
+    showToast(e.reason?.message || 'Something went wrong', 'error');
   });
   window.addEventListener('error', (e) => {
     console.error('[issuez] Uncaught error', e.error || e.message);
   });
+}
+
+// ---- dialog semantics, focus and Escape (ISSUEZ-005) -----------------------
+// The modals were plain divs with a backdrop click handler: no role, no aria-modal,
+// no focus movement and no Escape. They now get all four, plus a Tab cycle so focus
+// cannot wander into the page behind the overlay.
+let openDialogEl = null;
+let dialogOpener = null;
+
+// Listed in DOM order, which is also paint order, so the last entry present is the
+// dialog the user is actually looking at — and the one Escape has to close first.
+const DIALOG_CLOSERS = [
+  ['region-modal', () => setState({ selectedIssue: null })],
+  ['region-settings', () => setState({ showSettings: false })],
+  ['region-welcome', () => setState({ showWelcome: false })],
+];
+
+const dialogEls = () => DIALOG_CLOSERS
+  .map(([id]) => $(`#${id} .modal`))
+  .filter(Boolean);
+
+function dialogFocusables(dialog) {
+  return $$('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])', dialog)
+    .filter(el => !el.disabled && el.tabIndex !== -1);
+}
+
+// The regions are in paint order, so the last dialog present is the one on top.
+const topDialog = () => dialogEls()[dialogEls().length - 1] || null;
+
+function syncDialogFocus(previouslyFocused) {
+  const top = topDialog();
+  if (top === openDialogEl) return;
+
+  if (top) {
+    if (!openDialogEl && previouslyFocused && previouslyFocused !== document.body) dialogOpener = previouslyFocused;
+    openDialogEl = top;
+    const first = dialogFocusables(top)[0] || top;
+    first.focus();
+    return;
+  }
+
+  openDialogEl = null;
+  if (dialogOpener && dialogOpener.isConnected) dialogOpener.focus();
+  dialogOpener = null;
+}
+
+function closeTopDialog() {
+  const top = topDialog();
+  if (!top) return false;
+  const closer = DIALOG_CLOSERS.find(([id]) => $(`#${id} .modal`) === top);
+  if (!closer) return false;
+  closer[1]();
+  render();
+  return true;
+}
+
+function handleGlobalKeydown(e) {
+  const top = topDialog();
+
+  if (e.key === 'Escape') {
+    if (top && e.defaultPrevented) return;
+    if (top) {
+      e.preventDefault();
+      closeTopDialog();
+    } else if (document.querySelector('.select-wrapper.open')) {
+      closeAllSelects();
+    }
+    return;
+  }
+
+  if (e.key !== 'Tab' || !top) return;
+  // Keep Tab inside the open dialog: without this the page behind stays reachable.
+  const focusables = dialogFocusables(top);
+  if (focusables.length === 0) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  } else if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  }
 }
 
 async function boot() {
@@ -935,6 +1191,7 @@ async function boot() {
   initTheme();
   loadPersisted();
   applyTheme(getState().theme);
+  applyPersistedLayout();
   setupGlobals();
   subscribe(render);
   document.addEventListener('click', (e) => {
@@ -942,6 +1199,7 @@ async function boot() {
       closeAllSelects();
     }
   });
+  document.addEventListener('keydown', handleGlobalKeydown);
   const stored = sessionStorage.getItem(STORAGE_KEY);
   if (stored) {
     setToken(stored);

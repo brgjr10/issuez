@@ -702,6 +702,13 @@ select {
   width: 100%;
 }
 
+.select-trigger:focus,
+.select-trigger:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .select-trigger::after {
   content: '';
   width: 0;
@@ -751,6 +758,27 @@ select {
   background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
   font-weight: 600;
+}
+
+/* Options are reachable with the arrow keys once the dropdown is open, so they need a
+   visible focus ring too — the native outline was removed along with the native select. */
+.select-option:focus {
+  background: var(--bg-hover);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Label text for controls the design keeps unlabelled visually. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Header */
