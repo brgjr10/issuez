@@ -5,6 +5,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 export default defineConfig({
   root: '.',
   publicDir: 'assets',
+  base: '/issuez/',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -18,7 +19,7 @@ export default defineConfig({
   plugins: [
     viteSingleFile({
       removeViteModuleLoader: false,
-      deleteInlinedFiles: true,
+      deleteInlinedFiles: false,
     }),
   ],
   server: {
