@@ -148,7 +148,7 @@ function renderToolbar() {
           </select>
         </div>
         <div class="filter-group">
-          <label>
+          <label class="checkbox-label">
             <input type="checkbox" id="filter-archived" ${s.showArchivedRepos ? 'checked' : ''} onchange="window._toggleArchived(this.checked)">
             <span>Show archived repos</span>
           </label>
