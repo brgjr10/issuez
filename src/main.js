@@ -577,7 +577,7 @@ function filterIssues() {
       list = list.filter(i => !archivedSet.has(i.repo_full));
     }
   } else {
-    // If showing archived, don't filter them
+    // show all repos when not hiding
   }
   setState({ filteredIssues: list });
 }
