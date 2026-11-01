@@ -150,7 +150,7 @@ function renderToolbar() {
         <div class="filter-group">
           <label>
             <input type="checkbox" id="filter-archived" ${s.showArchivedRepos ? 'checked' : ''} onchange="window._toggleArchived(this.checked)">
-            Show archived repos
+            <span>Show archived repos</span>
           </label>
         </div>
       </div>
@@ -601,6 +601,9 @@ async function loadAllIssues() {
     const orgRepos = await Promise.all(
       orgs.map(o => getOrgRepos(o.login).catch(e => keepGoing(`list repositories for ${o.login}`, e)))
     );
+
+    const allRepos = [...userRepos, ...orgRepos.flat()];
+    const uniqueRepos = Array.from(new Map(allRepos.map(r => [r.full_name, r])).values());
 
     setState({ repos: uniqueRepos, user });
 
