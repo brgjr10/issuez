@@ -13,13 +13,6 @@
        be set by the host as X-Frame-Options: DENY to block framing. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://avatars.githubusercontent.com https://camo.githubusercontent.com; connect-src 'self' https://api.github.com; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').then((registration) => {
-        registration.update();
-      });
-    }
-  </script>
   <script type="module" crossorigin src="/issuez/assets/index-mPcgx1QC.js"></script>
   <link rel="stylesheet" crossorigin href="/issuez/assets/index-CqlPW2VC.css">
 </head>
