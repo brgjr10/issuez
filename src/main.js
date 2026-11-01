@@ -147,6 +147,12 @@ function renderToolbar() {
             <option value="me" ${s.filterAssignee === 'me' ? 'selected' : ''}>Assigned to me</option>
           </select>
         </div>
+        <div class="filter-group">
+          <label>
+            <input type="checkbox" id="filter-archived" ${s.showArchivedRepos ? 'checked' : ''} onchange="window._toggleArchived(this.checked)">
+            Show archived repos
+          </label>
+        </div>
       </div>
       <div class="toolbar-right">
         <button onclick="window._refresh()" title="Refresh">
@@ -565,6 +571,12 @@ function filterIssues() {
   }
   if (s.filterState !== 'all') list = list.filter(i => i.state === s.filterState);
   if (s.filterAssignee === 'me') list = list.filter(i => i.assignees?.some(a => a.login === s.user?.login));
+  if (!s.showArchivedRepos) {
+    const archivedSet = new Set((s.repos || []).filter(r => r.archived).map(r => r.full_name));
+    if (archivedSet.size) {
+      list = list.filter(i => !archivedSet.has(i.repo_full));
+    }
+  }
   setState({ filteredIssues: list });
 }
 
@@ -589,10 +601,6 @@ async function loadAllIssues() {
     const orgRepos = await Promise.all(
       orgs.map(o => getOrgRepos(o.login).catch(e => keepGoing(`list repositories for ${o.login}`, e)))
     );
-
-    const allRepos = [...userRepos, ...orgRepos.flat()];
-    const uniqueRepos = Array.from(new Map(allRepos.map(r => [r.full_name, r])).values())
-      .filter(r => !r.archived);
 
     setState({ repos: uniqueRepos, user });
 
@@ -903,6 +911,10 @@ function setupGlobals() {
   window._setFilter = (key, val) => {
     if (key === 'state') setState({ filterState: val });
     if (key === 'assignee') setState({ filterAssignee: val });
+    filterIssues();
+  };
+  window._toggleArchived = (checked) => {
+    setState({ showArchivedRepos: checked });
     filterIssues();
   };
   window._setSort = (key) => {
