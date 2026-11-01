@@ -15,7 +15,9 @@
   <meta name="referrer" content="no-referrer">
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js');
+      navigator.serviceWorker.register('./sw.js').then((registration) => {
+        registration.update();
+      });
     }
   </script>
   <script type="module" crossorigin src="/issuez/assets/index-mPcgx1QC.js"></script>
