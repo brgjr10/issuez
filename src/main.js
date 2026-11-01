@@ -150,7 +150,7 @@ function renderToolbar() {
         <div class="filter-group">
           <label>
             <input type="checkbox" id="filter-archived" ${s.showArchivedRepos ? 'checked' : ''} onchange="window._toggleArchived(this.checked)">
-            <span>Show archived repos</span>
+            <span>Hide archived repos</span>
           </label>
         </div>
       </div>
@@ -571,11 +571,13 @@ function filterIssues() {
   }
   if (s.filterState !== 'all') list = list.filter(i => i.state === s.filterState);
   if (s.filterAssignee === 'me') list = list.filter(i => i.assignees?.some(a => a.login === s.user?.login));
-  if (!s.showArchivedRepos) {
+  if (s.showArchivedRepos !== true) {
     const archivedSet = new Set((s.repos || []).filter(r => r.archived).map(r => r.full_name));
     if (archivedSet.size) {
       list = list.filter(i => !archivedSet.has(i.repo_full));
     }
+  } else {
+    // If showing archived, don't filter them
   }
   setState({ filteredIssues: list });
 }

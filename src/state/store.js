@@ -18,7 +18,7 @@ const state = {
   rateLimit: { remaining: 5000, reset: 0 },
   showSettings: false,
   showWelcome: false,
-  showArchivedRepos: false,
+  showArchivedRepos: true,
 };
 
 const listeners = new Set();
