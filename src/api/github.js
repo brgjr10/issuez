@@ -124,7 +124,7 @@ export async function getCurrentUser() {
 }
 
 export async function getUserRepos() {
-  return fetchWithPagination('/user/repos?sort=updated');
+  return fetchWithPagination('/user/repos?sort=updated&affiliation=owner,collaborator,organization_member');
 }
 
 export async function getUserOrgs() {
@@ -132,7 +132,7 @@ export async function getUserOrgs() {
 }
 
 export async function getOrgRepos(org) {
-  return fetchWithPagination(`/orgs/${encodeURIComponent(org)}/repos?sort=updated`);
+  return fetchWithPagination(`/orgs/${encodeURIComponent(org)}/repos?sort=updated&type=all`);
 }
 
 export async function getIssues(owner, repo, state = 'open') {

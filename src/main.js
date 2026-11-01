@@ -591,7 +591,8 @@ async function loadAllIssues() {
     );
 
     const allRepos = [...userRepos, ...orgRepos.flat()];
-    const uniqueRepos = Array.from(new Map(allRepos.map(r => [r.full_name, r])).values());
+    const uniqueRepos = Array.from(new Map(allRepos.map(r => [r.full_name, r])).values())
+      .filter(r => !r.archived);
 
     setState({ repos: uniqueRepos, user });
 
